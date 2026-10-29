@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Miracle Whip · Mission Control</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#04070c;--p:#0a1119;--p2:#0f1924;--line:#15324a;--fg:#e8f1fa;--mut:#7f93a8;--acc:#22d3ee;--acc2:#3ea6ff;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--mag:#e879f9;--r:14px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{background-image:linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.035) 1px,transparent 1px);background-size:40px 40px}
+.app{height:100vh;display:grid;grid-template-rows:72px 64px 46px 1fr;gap:8px;padding:8px 10px 10px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+/* header */
+header{display:flex;align-items:center;gap:18px;background:linear-gradient(90deg,#0a1724,#060b12);border:1px solid var(--line);border-radius:var(--r);padding:0 16px;box-shadow:0 0 22px rgba(34,211,238,.08) inset}
+.brand{display:flex;flex-direction:column;line-height:1.1}
+.brand b{font-size:22px;letter-spacing:3px;text-transform:uppercase}
+.brand span{font-size:12px;letter-spacing:4px;color:var(--acc);text-transform:uppercase}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+#clock{font-size:44px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums;margin-left:auto}
+#date{font-size:15px;color:var(--mut);line-height:1.2;text-transform:uppercase;letter-spacing:1px}
+#wx{display:flex;gap:16px;align-items:center;border-left:1px solid var(--line);padding-left:16px}
+#wx .t{font-size:34px;font-weight:700}
+#wx .c{font-size:14px;color:var(--mut);line-height:1.25}
+.hbtn{display:flex;align-items:center;justify-content:center;min-width:64px;height:52px;padding:0 14px;border-radius:12px;background:var(--p2);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:17px;font-weight:600}
+.hbtn:active,.hbtn:hover{border-color:var(--acc);box-shadow:0 0 12px rgba(34,211,238,.35)}
+/* know before you go */
+#kbyg{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(232,121,249,.12),rgba(34,211,238,.06));border:1px solid #3b2a52;border-radius:var(--r);padding:0 10px 0 16px;overflow:hidden}
+#kbyg .lbl{font-size:12px;letter-spacing:3px;color:var(--mag);text-transform:uppercase;white-space:nowrap}
+#kbyg .msg{font-size:19px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#kbyg .msg small{color:var(--mut);font-weight:400;font-size:16px}
+.go{display:flex;align-items:center;height:50px;padding:0 16px;border-radius:12px;background:#151f2c;border:1px solid #2a3c52;color:var(--fg);text-decoration:none;font-size:17px;font-weight:600;white-space:nowrap}
+.go:active,.go:hover{border-color:var(--mag);box-shadow:0 0 12px rgba(232,121,249,.35)}
+.go.hi{background:linear-gradient(135deg,#7c3aed,#db2777);border-color:transparent}
+/* ticker */
+.tick{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--p)}
+/* grid */
+.grid{display:grid;grid-template-columns:1.65fr 1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;min-height:0}
+.panel{position:relative;display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--p);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.panel::before{content:"";position:absolute;top:0;left:14px;right:14px;height:1px;background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:.6}
+.ph{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--acc);border-bottom:1px solid var(--line);white-space:nowrap}
+.ph .src{margin-left:auto;color:#4f6377;letter-spacing:.5px;text-transform:none;font-size:11px}
+.ph a{color:var(--acc2);text-decoration:none;letter-spacing:.5px;text-transform:none;font-size:13px;margin-left:auto}
+.pb{flex:1;min-height:0;position:relative}
+iframe{width:100%;height:100%;border:0;display:block;background:#071018}
+.nav{grid-row:1/3}
+.chips{display:flex;gap:6px;padding:6px}
+.chip{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:52px;border-radius:10px;background:var(--p2);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:15px;font-weight:600;text-align:center;line-height:1.1}
+.chip small{font-size:11px;color:var(--mut);font-weight:400}
+.chip:active,.chip:hover{border-color:var(--acc)}
+.scroll{overflow:hidden;padding:6px 10px}
+/* aviation + fleet rows */
+.row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #102233}
+.row:last-child{border-bottom:0}
+.cat{min-width:58px;text-align:center;padding:4px 0;border-radius:7px;font-weight:800;font-size:14px;letter-spacing:1px}
+.VFR{background:rgba(52,211,153,.15);color:var(--ok);border:1px solid var(--ok)}
+.MVFR{background:rgba(62,166,255,.15);color:var(--acc2);border:1px solid var(--acc2)}
+.IFR{background:rgba(248,113,113,.15);color:var(--bad);border:1px solid var(--bad)}
+.LIFR{background:rgba(232,121,249,.15);color:var(--mag);border:1px solid var(--mag)}
+.UNK{color:var(--mut);border:1px solid #2a3c52}
+.id{font-size:20px;font-weight:700;min-width:64px}
+.sub{font-size:13px;color:var(--mut)}
+.raw{font-size:10.5px;color:#5f7489;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.car .nm{font-size:16px;font-weight:700;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:8px;border-radius:5px;background:#132131;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;border-radius:5px}
+.st{font-size:12px;padding:3px 8px;border-radius:20px;border:1px solid #2a3c52;color:var(--mut);white-space:nowrap}
+.st.driving{color:var(--acc);border-color:var(--acc)}.st.charging{color:var(--ok);border-color:var(--ok)}
+.plane{margin-top:6px;padding:8px 10px;border-radius:10px;background:linear-gradient(135deg,rgba(62,166,255,.1),rgba(34,211,238,.04));border:1px solid #1d3a57}
+.plane .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
+.kv div{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1px}
+.kv b{display:block;font-size:17px;color:var(--fg);letter-spacing:0;text-transform:none}
+.mini{display:flex;gap:6px;margin-top:8px}
+.mini a{flex:1;text-align:center;padding:10px 4px;border-radius:9px;background:var(--p2);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:14px;font-weight:600}
+.news a.h{display:block;padding:8px 2px;border-bottom:1px solid #102233;color:var(--fg);text-decoration:none;font-size:15px;line-height:1.3}
+.news a.h:last-child{border-bottom:0}
+.news .tag{font-size:10px;letter-spacing:2px;color:var(--warn);text-transform:uppercase;display:block;margin-bottom:2px}
+.tv{height:100%}
+.split{display:grid;grid-template-rows:1.25fr 1fr;height:100%}
+.split>div{min-height:0;position:relative}
+.split>div+div{border-top:1px solid var(--line)}
+.err{color:var(--mut);font-size:14px;padding:10px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="dot"></div>
+  <div class="brand"><b>Miracle Whip</b><span>Mission Control</span></div>
+  <a class="hbtn" href="./">⌂ Dash</a>
+  <a class="hbtn" href="drive.html">🚓 Drive</a>
+  <a class="hbtn" href="https://my.tessie.com/">🔋 Tessie</a>
+  <a class="hbtn" href="javascript:location.reload()">⟳</a>
+  <div id="clock">--:--</div>
+  <div id="date"></div>
+  <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs<br>loading…</div></div>
+</header>
+
+<div id="kbyg"><span class="lbl">Know before you go</span><span class="msg" id="kmsg">…</span><span id="kbtn" style="display:flex;gap:8px"></span></div>
+
+<div class="tick"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+<script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+{"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq 100"},{"proName":"FOREXCOM:DJI","title":"Dow"},{"proName":"NASDAQ:TSLA","title":"TSLA"},{"proName":"NASDAQ:NVDA","title":"NVDA"},{"proName":"TVC:US10Y","title":"US 10Y"},{"proName":"TVC:USOIL","title":"Oil"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"}],"showSymbolLogo":true,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"en"}
+</script></div></div>
+
+<div class="grid">
+  <section class="panel nav">
+    <div class="ph">◉ TeslaNav<span class="src">teslanav.com · live</span></div>
+    <div class="pb"><iframe src="https://teslanav.com/" allow="geolocation; fullscreen" title="TeslaNav"></iframe></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">⟟ Traffic<span class="src">Waze live map</span></div>
+    <div class="pb"><iframe src="https://embed.waze.com/iframe?zoom=11&lat=28.08&lon=-82.74&ct=livemap" title="Waze traffic"></iframe></div>
+    <div class="chips" id="routes"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">◈ Fleet insights<span class="src" id="fupd">fleet.json</span></div>
+    <div class="pb scroll" id="fleet"><div class="err">Loading fleet…</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">▣ Smith Robotaxi HQ<a href="https://westonwhite.github.io/smith-fleet-hq/">open ↗</a></div>
+    <div class="pb"><iframe src="https://westonwhite.github.io/smith-fleet-hq/" title="Smith Robotaxi HQ"></iframe></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">✈ Aviation<a href="https://westonwhite.github.io/flight-brief/">Flight Brief ↗</a></div>
+    <div class="pb scroll" id="avx"><div class="err">Loading METARs…</div></div>
+    <div class="sub" style="padding:0 12px 6px;font-size:10.5px">METARs via NWS api.weather.gov · cat computed on-page</div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">▲ Markets · top movers<span class="src">TradingView widgets</span></div>
+    <div class="pb"><div class="split">
+      <div><div class="tradingview-widget-container tv"><div class="tradingview-widget-container__widget tv"></div>
+      <script src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>
+      {"colorTheme":"dark","dateRange":"1D","exchange":"US","showChart":false,"locale":"en","isTransparent":true,"showSymbolLogo":true,"showFloatingTooltip":false,"width":"100%","height":"100%"}
+      </script></div></div>
+      <div><div class="tradingview-widget-container tv"><div class="tradingview-widget-container__widget tv"></div>
+      <script src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
+      {"feedMode":"market","market":"stock","isTransparent":true,"displayMode":"compact","width":"100%","height":"100%","colorTheme":"dark","locale":"en"}
+      </script></div></div>
+    </div></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph">☰ Headlines<span class="src">NYT RSS</span></div>
+    <div class="pb scroll news" id="news"><div class="err">Loading headlines…</div></div>
+  </section>
+</div>
+</div>
+
+<script>
+const tz='America/New_York';
+const WORK='28.0107,-82.7287', HOME='Tarpon Springs, FL 34689', GYM='Crunch Fitness Countryside Mall, Clearwater, FL';
+const VIA={'Belcher':'Belcher Rd & Tampa Rd, Palm Harbor, FL','East Lake':'East Lake Rd & Tampa Rd, Palm Harbor, FL','US-19':'US-19 & Tampa Rd, Palm Harbor, FL'};
+const gm=(dest,via)=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(dest)+(via?'&waypoints='+encodeURIComponent(via):'');
+const nyNow=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',hourCycle:'h23',weekday:'short'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return{h:+p.hour,wd:p.weekday}};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function tick(){const d=new Date();
+document.getElementById("clock").textContent=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:tz});
+document.getElementById("date").innerHTML=d.toLocaleDateString('en-US',{weekday:'long',timeZone:tz})+'<br>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:tz});}
+tick();setInterval(tick,1000);
+
+/* route chips: direction flips by time of day */
+function routes(){const {h}=nyNow();const toWork=h<12;
+const routesEl=document.getElementById("routes");
+routesEl.innerHTML=Object.keys(VIA).map(k=>`<a class="chip" href="${gm(toWork?WORK:HOME,VIA[k])}">${k}<small>→ ${toWork?'work':'home'}</small></a>`).join('');}
+routes();
+
+/* weather */
+const W={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorms',96:'T-storms w/ hail',99:'T-storms w/ hail'};
+const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+let WX=null;
+async function wx(){try{
+const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=28.146,28.0107&longitude=-82.757,-82.7287&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=precipitation_probability,temperature_2m&forecast_hours=4&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York');
+const j=await r.json();WX={home:j[0],work:j[1]};const c=j[0].current;
+document.getElementById('wx').innerHTML=`<div class="t">${Math.round(c.temperature_2m)}°</div><div class="c">${W[c.weather_code]||'—'} · ${dirs[Math.round(c.wind_direction_10m/22.5)%16]} ${Math.round(c.wind_speed_10m)} mph<br>Tarpon Springs · Open-Meteo</div>`;
+}catch(e){document.querySelector('#wx .c').textContent='Weather unavailable';}kbyg();}
+const rain=w=>w?Math.max(...w.hourly.precipitation_probability.slice(0,3)):null;
+
+/* aviation (NWS latest obs, CORS-open; aviationweather.gov blocks browser CORS) */
+let KCLW=null;
+function parseMetar(raw){const o={raw};const t=raw.split(' ');
+const w=raw.match(/\b(VRB|\d{3})(\d{2,3})(?:G(\d{2,3}))?KT\b/);if(w){o.wd=w[1];o.ws=+w[2];o.wg=w[3]?+w[3]:null;}
+const v=raw.match(/\s(?:(\d+)\s)?(?:(\d+)\/(\d+)|(\d+))SM\b/);if(v){o.vis=(v[1]?+v[1]:0)+(v[4]?+v[4]:(+v[2]/+v[3]));if(/M\d\/\dSM/.test(raw))o.vis=0.2;}
+let ceil=null;for(const m of raw.matchAll(/\b(BKN|OVC|VV)(\d{3})\b/g)){const b=+m[2]*100;if(ceil===null||b<ceil)ceil=b;}o.ceil=ceil;
+const tt=raw.match(/\s(M?\d{2})\/(M?\d{2})?\s/);if(tt){o.t=+tt[1].replace('M','-');}
+const a=raw.match(/\bA(\d{4})\b/);if(a)o.alt=+a[1]/100;
+const vis=o.vis??10,c=ceil??99999;
+o.cat=(c<500||vis<1)?'LIFR':(c<1000||vis<3)?'IFR':(c<=3000||vis<=5)?'MVFR':'VFR';
+o.wind=o.wd?(o.ws===0?'Calm':`${o.wd==='VRB'?'VRB':o.wd+'°'} ${o.ws}${o.wg?'G'+o.wg:''} kt`):'—';return o;}
+async function avx(){const ids=['KCLW','KPIE','KTPA'];
+const res=await Promise.all(ids.map(id=>fetch(`https://api.weather.gov/stations/${id}/observations/latest`).then(r=>r.json()).then(j=>parseMetar(j.properties.rawMessage||'')).catch(()=>null)));
+const avxEl=document.getElementById("avx");
+avxEl.innerHTML=res.map((m,i)=>m&&m.raw?`<div class="row"><span class="cat ${m.cat}">${m.cat}</span><div style="min-width:0;flex:1"><div style="display:flex;gap:10px;align-items:baseline"><span class="id mono">${ids[i]}</span><span class="sub">${m.wind}${m.ceil?' · CIG '+m.ceil:''}${m.vis!=null?' · '+(m.vis>=10?'10+':m.vis)+' SM':''}</span></div><div class="raw mono">${esc(m.raw)}</div></div></div>`:`<div class="row"><span class="cat UNK">—</span><span class="id mono">${ids[i]}</span><a class="sub" href="https://aviationweather.gov/data/metar/?ids=${ids[i]}&decoded=yes">open METAR ↗</a></div>`).join('')
++`<div class="mini"><a href="https://aviationweather.gov/data/metar/?ids=KCLW,KPIE,KTPA&hours=0&decoded=yes">AWC ↗</a><a href="https://skyvector.com/?chart=301">SkyVector ↗</a><a href="https://westonwhite.github.io/flight-brief/">Brief ↗</a></div>`;
+KCLW=res[0];renderFleet();kbyg();}
+
+/* fleet: Teslas from sanitized fleet.json + the Comanche */
+let FLEET=null;
+async function fleet(){try{FLEET=await (await fetch('fleet.json?'+Date.now())).json();}catch(e){FLEET={cars:[]};}renderFleet();}
+function ago(iso){const m=Math.round((Date.now()-new Date(iso))/60000);return m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago';}
+function renderFleet(){const el=document.getElementById('fleet');if(!FLEET)return;
+if(FLEET.updated)document.getElementById('fupd').textContent='Tessie snapshot · '+ago(FLEET.updated);
+const col=b=>b>=50?'var(--ok)':b>=25?'var(--warn)':'var(--bad)';
+let h=(FLEET.cars||[]).map(c=>`<div class="row car"><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">${esc(c.name)}</span><span class="mono" style="font-weight:700">${c.battery??'—'}%<span class="sub"> · ${c.range_mi??'—'} mi</span></span></div><div class="bar"><i style="width:${c.battery||0}%;background:${col(c.battery||0)}"></i></div></div><span class="st ${c.status}">${c.status}${c.charging==='Charging'?' ⚡':''}</span></div>`).join('')||'<div class="err">No fleet.json yet</div>';
+let p='<div class="sub">Comanche wx loading…</div>';
+if(KCLW&&KCLW.raw){const m=KCLW,elev=71;let da='—',pa='—',xw='—';
+if(m.alt!=null&&m.t!=null){const PA=elev+(29.92-m.alt)*1000;const DA=PA+120*(m.t-(15-2*PA/1000));pa=Math.round(PA).toLocaleString();da=Math.round(DA/10)*10;da=da.toLocaleString()+' ft';}
+if(m.wd&&m.wd!=='VRB'&&m.ws){const best=[160,340].map(r=>{const a=(m.wd-r)*Math.PI/180;return{r:r/10,hw:Math.round(m.ws*Math.cos(a)),xw:Math.abs(Math.round(m.ws*Math.sin(a)))}}).sort((a,b)=>b.hw-a.hw)[0];xw=`Rwy ${best.r} · ${best.xw} kt X`;}else if(m.ws===0)xw='Calm';
+p=`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:700">✈ N7236P · Comanche 180</span><span class="cat ${m.cat}" style="margin-left:auto">${m.cat}</span></div>
+<div class="kv"><div>KCLW wind<b class="mono">${m.wind}</b></div><div>Density alt<b class="mono">${da}</b></div><div>Xwind<b class="mono" style="font-size:14px">${xw}</b></div></div>
+<div class="mini"><a href="https://westonwhite.github.io/flight-brief/">Flight Brief ↗</a><a href="https://westonwhite.github.io/smiths-comanche-fall-trip-2026/">Comanche trip ↗</a></div>`;}
+el.innerHTML=h+`<div class="plane">${p}</div>`;}
+
+/* headlines (NYT RSS sends Access-Control-Allow-Origin: *) */
+async function rss(u){const x=new DOMParser().parseFromString(await (await fetch(u)).text(),'text/xml');return [...x.querySelectorAll('item')].map(i=>({t:i.querySelector('title')?.textContent,l:i.querySelector('link')?.textContent}));}
+async function news(){const el=document.getElementById('news');try{
+const [top,biz]=await Promise.all([rss('https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml'),rss('https://rss.nytimes.com/services/xml/rss/nyt/Business.xml').catch(()=>[])]);
+let h=biz[0]?`<a class="h" href="${esc(biz[0].l)}"><span class="tag">Market driver</span>${esc(biz[0].t)}</a>`:'';
+h+=top.slice(0,5).map((n,i)=>`<a class="h" href="${esc(n.l)}">${i===0?'<span class="tag" style="color:var(--acc)">Top story</span>':''}${esc(n.t)}</a>`).join('');el.innerHTML=h;
+}catch(e){el.innerHTML='<div class="mini" style="flex-wrap:wrap"><a href="https://news.google.com/">Google News ↗</a><a href="https://apnews.com/">AP ↗</a><a href="https://www.cnbc.com/markets/">CNBC ↗</a></div>';}}
+
+/* know before you go */
+function kbyg(){const {h,wd}=nyNow();const weekday=!['Sat','Sun'].includes(wd);
+const msg=document.getElementById('kmsg'),btn=document.getElementById('kbtn');
+const hr=rain(WX&&WX.home),wr=rain(WX&&WX.work);
+const rainTxt=p=>p==null?'':p>=50?` ☔ ${p}% rain next 3h`:p>=25?` 🌦 ${p}% rain chance`:' ☀ dry next 3h';
+if(weekday&&h>=5&&h<12){const t=WX?Math.round(WX.work.current.temperature_2m)+'° at work':'';
+msg.innerHTML=`🌅 Morning run to work <small>— ${t}${rainTxt(Math.max(hr??0,wr??0))} · check Waze before picking a route</small>`;
+btn.innerHTML=Object.keys(VIA).map((k,i)=>`<a class="go ${i===0?'hi':''}" href="${gm(WORK,VIA[k])}">${k}</a>`).join('');}
+else if(h>=15&&h<22){msg.innerHTML=`🏋️ Gym or home? <small>— ${WX?Math.round(WX.home.current.temperature_2m)+'° in Tarpon':''}${rainTxt(hr)}</small>`;
+btn.innerHTML=`<a class="go hi" href="${gm(GYM)}">🏋️ Crunch Countryside</a>`+Object.keys(VIA).map(k=>`<a class="go" href="${gm(HOME,VIA[k])}">🏠 ${k}</a>`).join('');}
+else{const c=KCLW&&KCLW.cat;msg.innerHTML=`${!weekday?'🛩 Weekend':'☀ Midday'} <small>— KCLW ${c||'…'}${c==='VFR'?' · good day to fly the Comanche':''}${rainTxt(hr)}</small>`;
+btn.innerHTML=`<a class="go hi" href="https://westonwhite.github.io/flight-brief/">Flight Brief</a><a class="go" href="${gm(HOME)}">🏠 Home</a>`;}}
+
+wx();avx();fleet();news();kbyg();
+setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(fleet,5*60e3);setInterval(news,15*60e3);setInterval(()=>{routes();kbyg()},60e3);
+</script>
+</body>
+</html>

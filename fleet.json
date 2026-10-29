@@ -1,0 +1,26 @@
+{
+ "updated": "2026-10-29T19:08:24+00:00",
+ "cars": [
+  {
+   "name": "Caroline's whip",
+   "battery": 50,
+   "range_mi": 115,
+   "charging": "Disconnected",
+   "status": "parked"
+  },
+  {
+   "name": "The Starship",
+   "battery": 65,
+   "range_mi": 140,
+   "charging": "Disconnected",
+   "status": "asleep"
+  },
+  {
+   "name": "the miracle whip",
+   "battery": 52,
+   "range_mi": 173,
+   "charging": "Disconnected",
+   "status": "asleep"
+  }
+ ]
+}
