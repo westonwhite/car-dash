@@ -1,0 +1,24 @@
+{
+  "pilot": "Weston Smith",
+  "aircraft": "N7236P · Piper PA-24-180 Comanche",
+  "source": "ForeFlight tracks + FlightAware",
+  "totals": {
+    "as_of": "2026-02-16",
+    "label": "as of Feb 16, 2026",
+    "total_hours": 1124,
+    "pa24_hours": 450,
+    "last_12mo_hours": 55,
+    "last_12mo_label": "last 12 mo (to Feb)"
+  },
+  "tracked": {
+    "since": "2026-10-17",
+    "label": "Tracked since Oct 17",
+    "flights": 7,
+    "hours": 23.9
+  },
+  "recent": [
+    { "date": "2026-10-26", "from": "1A5", "to": "KCLW", "hours": 3.4 },
+    { "date": "2026-10-24", "from": "KLWM", "to": "1A5", "hours": 5.8 },
+    { "date": "2026-10-20", "from": "5A1", "to": "KLWM", "hours": 5.2 }
+  ]
+}
