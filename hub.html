@@ -98,6 +98,91 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 .fbar{display:flex;gap:6px;align-items:center}
 .fbtn{margin-left:auto;background:var(--p2);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:2px 10px;font-size:13px;cursor:pointer;letter-spacing:0;text-transform:none}
 .np{font-size:12px;color:var(--warn)}
+/* map label de-overlap: dot at the car, label placed beside it (direction picked in JS) */
+.cpw{position:relative;width:0;height:0}
+.cdot{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--acc);border:2px solid #0a1119;box-shadow:0 0 8px rgba(34,211,238,.8)}
+.cpw .cpin{position:absolute;transform:none}
+.cpw.d-t .cpin{left:0;bottom:9px;transform:translateX(-50%)}
+.cpw.d-b .cpin{left:0;top:9px;transform:translateX(-50%)}
+.cpw.d-r .cpin{left:9px;top:0;transform:translateY(-50%)}
+.cpw.d-l .cpin{right:9px;top:0;transform:translateY(-50%)}
+.cpw.d-tr .cpin{left:6px;bottom:6px}.cpw.d-tl .cpin{right:6px;bottom:6px}
+.cpw.d-br .cpin{left:6px;top:6px}.cpw.d-bl .cpin{right:6px;top:6px}
+
+/* ===== partial-screen / narrow viewports (Tesla browser with the map beside it) =====
+   >=1300px keeps the original full-screen dashboard above untouched. */
+@media (max-width:1299px){
+  html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
+  .app{height:auto;min-height:100vh;grid-template-rows:none;grid-auto-rows:auto;grid-template-columns:minmax(0,1fr);padding:6px 8px 12px;gap:8px}
+  .app>*{min-width:0}
+  header{order:1;flex-wrap:wrap;gap:8px 12px;padding:8px 12px;min-height:60px}
+  #kbyg{order:2;flex-wrap:wrap;gap:6px 10px;padding:8px 10px 8px 14px;min-height:56px}
+  .grid{order:3}
+  .tick{order:4;min-height:46px}   /* market ticker drops below the important panels */
+  .brand b{font-size:clamp(15px,1.8vw,22px);letter-spacing:2px}
+  .brand span{font-size:clamp(10px,1.1vw,12px);letter-spacing:3px}
+  #clock{font-size:clamp(28px,3.6vw,44px)}
+  #date{font-size:clamp(12px,1.4vw,15px)}
+  #wx .t{font-size:clamp(24px,2.8vw,34px)}
+  #wx .c{font-size:clamp(12px,1.3vw,14px)}
+  #wx{gap:10px;padding-left:12px}
+  .hbtn{min-width:52px;height:46px;padding:0 10px;font-size:clamp(14px,1.5vw,17px)}
+  #kbyg .msg{flex:1 1 320px;min-width:0;white-space:normal;font-size:clamp(15px,1.7vw,19px);line-height:1.25}
+  #kbyg .msg small{font-size:clamp(13px,1.4vw,16px)}
+  #kbtn{flex-wrap:wrap}
+  .go{height:46px;font-size:clamp(14px,1.5vw,17px)}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:auto;min-height:auto}
+  .grid>.panel{min-width:0}
+  .nav{grid-row:auto}
+  /* priority order: fleet+Comanche, TeslaNav, traffic, aviation, robotaxi HQ, markets, news */
+  .p-fleet{order:1}.p-nav{order:2}.p-traffic{order:3}.p-avx{order:4}.p-hq{order:5}.p-mkt{order:6}.p-news{order:7;grid-column:1/-1}
+  .p-nav,.p-traffic,.p-hq{height:clamp(340px,62vh,600px)}
+  .p-avx{min-height:clamp(260px,40vh,420px)}
+  .p-mkt{height:clamp(360px,60vh,560px)}
+  .p-news{min-height:260px}
+  .p-fleet .pb,.p-avx .pb,.p-news .pb{flex:1 0 auto}
+  #fleet{overflow:visible}
+  #fmap{height:clamp(200px,30vh,320px)}
+  .scroll{overflow:visible}
+  .ph{font-size:clamp(11px,1.2vw,12px);letter-spacing:2px}
+  .ph .src{overflow:hidden;text-overflow:ellipsis;min-width:0}
+}
+@media (max-width:1100px){
+  /* single column: every map/iframe gets the full width */
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .p-news{grid-column:auto}
+  .p-nav,.p-traffic,.p-hq{height:clamp(320px,55vh,560px)}
+  .p-mkt{height:clamp(340px,60vh,520px)}
+  .p-avx{min-height:0}
+  #fmap{height:clamp(220px,42vh,380px)}
+  .ftiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  /* header: brand + buttons on row 1, clock/date/weather on row 2 */
+  header{display:grid;grid-template-columns:auto auto repeat(4,auto) minmax(0,1fr);align-items:center;gap:8px 10px}
+  #clock{grid-row:2;grid-column:1/3;margin-left:0;justify-self:start}
+  #date{grid-row:2;grid-column:3/6}
+  #wx{grid-row:2;grid-column:6/-1;justify-self:end;border-left:0;padding-left:0;min-width:0}
+  /* know-before-you-go: route buttons get their own full-width row */
+  #kbtn{flex:1 1 100%}
+  #kbtn .go{flex:1 1 0;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis}
+}
+/* short viewports (browser shorter than ~700px): slimmer header + strips */
+@media (max-height:700px){
+  .app{grid-template-rows:56px 52px 46px 1fr;gap:6px;padding:6px 8px 8px}
+  .brand b{font-size:18px}
+  #clock{font-size:34px}
+  #wx .t{font-size:26px}
+  .hbtn{height:42px}
+  .go{height:40px}
+  .chip{min-height:44px}
+  #fmap{min-height:100px}
+}
+@media (max-height:700px) and (max-width:1299px){
+  .app{grid-template-rows:none}
+  header{min-height:52px;padding:6px 10px}
+  .p-nav,.p-traffic,.p-hq{height:clamp(300px,72vh,460px)}
+  .p-mkt{height:clamp(320px,70vh,460px)}
+  #fmap{height:clamp(170px,34vh,240px)}
+}
 </style>
 </head>
 <body>
@@ -114,7 +199,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs<br>loading…</div></div>
 </header>
 
-<div id="kbyg"><span class="lbl">Know before you go</span><span class="msg" id="kmsg">…</span><span id="kbtn" style="display:flex;gap:8px"></span></div>
+<div id="kbyg"><span class="lbl">Know before you go</span><span class="msg" id="kmsg">…</span><span id="kbtn" style="display:flex;gap:8px;min-width:0"></span></div>
 
 <div class="tick"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
 <script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
@@ -122,34 +207,34 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 </script></div></div>
 
 <div class="grid">
-  <section class="panel nav">
+  <section class="panel nav p-nav">
     <div class="ph">◉ TeslaNav<span class="src">teslanav.com · live</span></div>
     <div class="pb"><iframe src="https://teslanav.com/" allow="geolocation; fullscreen" title="TeslaNav"></iframe></div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-traffic">
     <div class="ph">⟟ Traffic<span class="src">Waze live map</span></div>
     <div class="pb"><iframe src="https://embed.waze.com/iframe?zoom=11&lat=28.08&lon=-82.74&ct=livemap" title="Waze traffic"></iframe></div>
     <div class="chips" id="routes"></div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-fleet">
     <div class="ph">◈ Fleet insights<span class="src" id="fupd">fleet.json</span><button class="fbtn" id="frefresh" onclick="fleet()" title="Refresh fleet">⟳</button></div>
     <div class="pb scroll" id="fleet"><div class="err">Loading fleet…</div></div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-hq">
     <div class="ph">▣ Smith Robotaxi HQ<a href="https://westonwhite.github.io/smith-fleet-hq/">open ↗</a></div>
     <div class="pb"><iframe src="https://westonwhite.github.io/smith-fleet-hq/" title="Smith Robotaxi HQ"></iframe></div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-avx">
     <div class="ph">✈ Aviation<a href="https://westonwhite.github.io/flight-brief/">Flight Brief ↗</a></div>
     <div class="pb scroll" id="avx"><div class="err">Loading METARs…</div></div>
     <div class="sub" style="padding:0 12px 6px;font-size:10.5px">METARs via NWS api.weather.gov · cat computed on-page</div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-mkt">
     <div class="ph">▲ Markets · top movers<span class="src">TradingView widgets</span></div>
     <div class="pb"><div class="split">
       <div><div class="tradingview-widget-container tv"><div class="tradingview-widget-container__widget tv"></div>
@@ -163,7 +248,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
     </div></div>
   </section>
 
-  <section class="panel">
+  <section class="panel p-news">
     <div class="ph">☰ Headlines<span class="src">NYT RSS</span></div>
     <div class="pb scroll news" id="news"><div class="err">Loading headlines…</div></div>
   </section>
@@ -235,7 +320,7 @@ else{localStorage.setItem(WK_KEY,h.get('k'));if(h.get('w'))localStorage.setItem(
 history.replaceState(null,'',location.pathname+location.search);})();
 const wkey=()=>{try{return localStorage.getItem(WK_KEY)||''}catch(e){return ''}};
 const wurl=()=>{try{return (localStorage.getItem(WK_URL)||WORKER_DEFAULT).replace(/\/+$/,'')}catch(e){return WORKER_DEFAULT}};
-let FLEET=null,FMAP=null,FLAYER=null;
+let FLEET=null,FMAP=null,FLAYER=null,FMK=[];
 async function fleet(){const k=wkey();const btn=document.getElementById('frefresh');if(btn)btn.disabled=true;
 try{if(k){const r=await fetch(wurl()+'/fleet',{headers:{'X-Access-Key':k},cache:'no-store'});
 if(!r.ok)throw new Error(r.status===401?'key rejected':'HTTP '+r.status);
@@ -248,12 +333,19 @@ function ago(iso){const m=Math.round((Date.now()-new Date(iso))/60000);return m<
 function carStatus(c){if(c.charging_state==='Charging')return 'charging';if(c.shift_state&&c.shift_state!=='P'||(c.speed||0)>0)return 'driving';return c.state||'—';}
 function renderMap(cars){const el=document.getElementById('fmap');if(!el||!window.L)return;
 if(!FMAP){FMAP=L.map(el,{zoomControl:false,attributionControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(FMAP);FLAYER=L.layerGroup().addTo(FMAP);}
-FLAYER.clearLayers();const pts=[];
-cars.filter(c=>c.lat!=null&&c.lon!=null).forEach(c=>{pts.push([c.lat,c.lon]);
-L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<span class="cpin">${esc(c.name)} · ${c.battery_level??'—'}%</span>`,iconSize:[0,0]})}).addTo(FLAYER)
-.bindPopup(`<b>${esc(c.name)}</b><br>${c.battery_level??'—'}% · ${Math.round(c.est_range_mi||0)} mi<br>${carStatus(c)}${c.locked===false?' · UNLOCKED':''}<br>${c.updated?ago(c.updated):''}`);});
+FLAYER.clearLayers();const pts=[];FMK=[];
+cars.filter(c=>c.lat!=null&&c.lon!=null).forEach(c=>{pts.push([c.lat,c.lon]);const lbl=`${c.name} · ${c.battery_level??'—'}%`;
+const m=L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<div class="cpw d-t"><i class="cdot"></i><span class="cpin">${esc(lbl)}</span></div>`,iconSize:[0,0]})}).addTo(FLAYER)
+.bindPopup(`<b>${esc(c.name)}</b><br>${c.battery_level??'—'}% · ${Math.round(c.est_range_mi||0)} mi<br>${carStatus(c)}${c.locked===false?' · UNLOCKED':''}<br>${c.updated?ago(c.updated):''}`);FMK.push({m,w:lbl.length*6.6+18});});
 if(pts.length>1)FMAP.fitBounds(pts,{padding:[40,40],maxZoom:13});else if(pts.length)FMAP.setView(pts[0],13);else FMAP.setView([28.08,-82.7],10);
-setTimeout(()=>FMAP.invalidateSize(),50);}
+if(!FMAP._lblHook){FMAP.on('zoomend moveend resize',layoutLabels);FMAP._lblHook=1;}
+layoutLabels();
+setTimeout(()=>{FMAP.invalidateSize();layoutLabels();},50);}
+/* greedy label placement so nearby cars' labels don't stack on top of each other */
+
+function layoutLabels(){if(!FMAP||!FMK.length)return;const D=['t','b','r','l','tr','br','tl','bl'],grp=[];
+FMK.forEach(o=>{const p=FMAP.latLngToContainerPoint(o.m.getLatLng());let g=grp.find(g=>Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<34);if(!g){g={x:p.x,y:p.y,n:0};grp.push(g);}
+const d=D[g.n++%D.length];const el=o.m.getElement();const cw=el&&el.querySelector('.cpw');if(cw)cw.className='cpw d-'+d;});}
 function renderFleet(){const el=document.getElementById('fleet');if(!FLEET)return;
 const up=document.getElementById('fupd');up.textContent=FLEET.live?'Tessie live · '+ago(FLEET.updated):(FLEET.why==='Not paired'?'Not paired · fleet.json':'Worker '+FLEET.why+' · fleet.json')+(FLEET.updated?' · '+ago(FLEET.updated):'');
 const col=b=>b>=50?'var(--ok)':b>=25?'var(--warn)':'var(--bad)';
