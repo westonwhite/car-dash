@@ -328,7 +328,7 @@ const wurl=()=>{try{return (localStorage.getItem(WK_URL)||WORKER_DEFAULT).replac
 const wfetch=(path,opt={})=>fetch(wurl()+path,{cache:'no-store',...opt,headers:{'X-Access-Key':wkey(),...(opt.headers||{})}});
 let FLEET=null,NAV=null,FMAP=null,FLAYER=null,FMK=[];
 async function fleet(){const k=wkey();const btn=document.getElementById('frefresh');if(btn)btn.disabled=true;
-try{if(k){const r=await wfetch('/fleet');
+try{if(k){let r=await wfetch('/fleet');if(r.status>=500){await new Promise(z=>setTimeout(z,2500));r=await wfetch('/fleet');}
 if(!r.ok)throw new Error(r.status===401?'key rejected':'HTTP '+r.status);
 const j=await r.json();FLEET={live:true,updated:j.fetched_at,cars:j.cars||[]};}
 else throw new Error('Not paired');}
