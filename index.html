@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Miracle Whip Dash</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0b0d10;--card:#161a20;--card2:#1d232b;--fg:#f2f4f7;--mut:#9aa4b2;--acc:#3ea6ff;--r:22px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:22px 28px 40px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+#clock{font-size:84px;font-weight:700;line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+#date{font-size:28px;color:var(--mut);margin-top:6px}
+#wx{background:var(--card);border-radius:var(--r);padding:16px 24px;min-width:340px;text-align:right}
+#wx .t{font-size:52px;font-weight:700;line-height:1}
+#wx .c{font-size:22px;color:var(--mut);margin-top:6px}
+h2{font-size:20px;text-transform:uppercase;letter-spacing:2px;color:var(--mut);margin:26px 4px 12px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+a.tile{display:flex;flex-direction:column;justify-content:center;min-height:140px;padding:20px 22px;background:var(--card);border-radius:var(--r);color:var(--fg);text-decoration:none;border:2px solid transparent;transition:background .1s}
+a.tile:active,a.tile:hover{background:var(--card2);border-color:var(--acc)}
+.tile .i{font-size:44px;line-height:1}
+.tile .n{font-size:28px;font-weight:700;margin-top:10px}
+.tile .s{font-size:18px;color:var(--mut);margin-top:4px}
+.soon{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.soon div{background:#12161b;border:2px dashed #2a323d;border-radius:var(--r);padding:18px 22px;font-size:20px;color:var(--mut)}
+.soon b{color:var(--fg);display:block;font-size:24px;margin-bottom:6px}
+footer{margin-top:28px;color:#5d6673;font-size:16px}
+footer a{color:#7c8794}
+</style>
+</head>
+<body>
+<header>
+  <div><div id="clock">--:--</div><div id="date"></div></div>
+  <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs weather loading…</div></div>
+</header>
+
+<h2>✈️ Fly</h2>
+<div class="grid">
+  <a class="tile" href="https://westonwhite.github.io/flight-brief/"><span class="i">🛩️</span><span class="n">Flight Brief</span><span class="s">My VFR briefing</span></a>
+  <a class="tile" href="https://skyvector.com/?chart=301"><span class="i">🗺️</span><span class="n">SkyVector</span><span class="s">Sectional charts</span></a>
+  <a class="tile" href="https://aviationweather.gov/data/metar/?ids=KCLW,KPIE,KTPA&hours=0&decoded=yes"><span class="i">📡</span><span class="n">METARs</span><span class="s">KCLW · KPIE · KTPA</span></a>
+  <a class="tile" href="https://aviationweather.gov/gfa/"><span class="i">☁️</span><span class="n">GFA</span><span class="s">Graphical forecasts</span></a>
+</div>
+
+<h2>🌦️ Weather &amp; Road</h2>
+<div class="grid">
+  <a class="tile" href="https://www.windy.com/-Weather-radar-radar?radar,27.95,-82.6,9"><span class="i">🌀</span><span class="n">Radar</span><span class="s">Windy · Tampa Bay</span></a>
+  <a class="tile" href="https://radar.weather.gov/station/KTBW/standard"><span class="i">🛰️</span><span class="n">NWS Radar</span><span class="s">KTBW Tampa Bay</span></a>
+  <a class="tile" href="https://www.google.com/maps/dir/Clearwater,+FL/Tarpon+Springs,+FL/data=!5m1!1e1"><span class="i">🚗</span><span class="n">Traffic Home</span><span class="s">Clearwater → Tarpon</span></a>
+  <a class="tile" href="https://abetterrouteplanner.com/"><span class="i">⚡</span><span class="n">ABRP</span><span class="s">Route + charging plan</span></a>
+</div>
+
+<h2>🚘 The Miracle Whip</h2>
+<div class="grid">
+  <a class="tile" href="https://my.tessie.com/"><span class="i">🔋</span><span class="n">Tessie</span><span class="s">Car status &amp; controls</span></a>
+  <a class="tile" href="https://westonwhite.github.io/smith-fleet-hq/"><span class="i">🏁</span><span class="n">Fleet HQ</span><span class="s">Tesla fleet dashboard</span></a>
+  <a class="tile" href="https://westonwhite.github.io/smiths-comanche-fall-trip-2026/"><span class="i">🍂</span><span class="n">Comanche Trip</span><span class="s">Fall 2026</span></a>
+  <a class="tile" href="https://grok.com/"><span class="i">🤖</span><span class="n">Grok</span><span class="s">grok.com</span></a>
+</div>
+
+<h2>🎵 Music</h2>
+<div class="grid">
+  <a class="tile" href="https://music.youtube.com/"><span class="i">🎧</span><span class="n">YouTube Music</span><span class="s">My library</span></a>
+  <a class="tile" href="https://www.youtube.com/@WholeMars"><span class="i">🪐</span><span class="n">Whole Mars Catalog</span><span class="s">YouTube channel</span></a>
+  <a class="tile" href="https://music.youtube.com/search?q=whole+mars+catalog+house+music"><span class="i">🪩</span><span class="n">Whole Mars House</span><span class="s">YT Music search</span></a>
+</div>
+
+<h2>📰 News</h2>
+<div class="grid">
+  <a class="tile" href="https://www.notateslaapp.com/"><span class="i">📱</span><span class="n">Not a Tesla App</span><span class="s">Software &amp; features</span></a>
+  <a class="tile" href="https://www.teslarati.com/"><span class="i">📰</span><span class="n">Teslarati</span><span class="s">Tesla news</span></a>
+  <a class="tile" href="https://x.com/"><span class="i">𝕏</span><span class="n">X</span><span class="s">Timeline</span></a>
+</div>
+
+<h2>🔜 Coming soon</h2>
+<div class="soon">
+  <div><b>Tesla Automations</b>Seatbelt / arrive-home triggers with custom voice announcements (in China now, flagged for wider release).</div>
+  <div><b>Tessie ⇄ Grok connector</b>“Is the car locked? Cool it to 70.” via Tessie MCP in Grok.</div>
+  <div><b>Home Assistant + Tessie</b>Garage, lights &amp; precondition automations around the car.</div>
+  <div><b>TeslaMate</b>Self-hosted drive &amp; charge history dashboards.</div>
+</div>
+
+<footer>Tip: for full-screen in the Tesla browser, open
+<a href="https://www.youtube.com/redirect?q=https://westonwhite.github.io/car-dash/">this link</a> and tap “Go to site”.</footer>
+
+<script>
+const tz='America/New_York';
+function tick(){const d=new Date();
+document.getElementById('clock').textContent=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:tz});
+document.getElementById('date').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:tz});}
+tick();setInterval(tick,1000);
+const W={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorms',96:'T-storms w/ hail',99:'T-storms w/ hail'};
+const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+async function wx(){const el=document.getElementById('wx');
+try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=28.146&longitude=-82.757&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America%2FNew_York');
+if(!r.ok)throw 0;const c=(await r.json()).current;
+const dir=dirs[Math.round(c.wind_direction_10m/22.5)%16];
+const g=c.wind_gusts_10m>c.wind_speed_10m+3?` G${Math.round(c.wind_gusts_10m)}`:'';
+el.innerHTML=`<div class="t">${Math.round(c.temperature_2m)}°F</div><div class="c">${W[c.weather_code]||'—'} · Wind ${dir} ${Math.round(c.wind_speed_10m)}${g} kt<br>Tarpon Springs</div>`;
+}catch(e){el.innerHTML='<div class="t">—</div><div class="c">Weather unavailable</div>';}}
+wx();setInterval(wx,10*60*1000);
+</script>
+</body>
+</html>
