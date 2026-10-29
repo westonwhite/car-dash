@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
 body{background-image:linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.035) 1px,transparent 1px);background-size:40px 40px}
-.app{height:100vh;display:grid;grid-template-rows:72px 66px 46px minmax(0,1fr);gap:8px;padding:8px 10px 10px}
+.app{height:100vh;display:grid;grid-template-rows:34px 32px 70px 64px minmax(0,1fr);gap:8px;padding:8px 10px 10px}
 .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 svg.i{width:1.1em;height:1.1em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* header */
@@ -44,8 +44,40 @@ header{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg
 .go.hi span{color:#fff}
 .go.send{min-width:74px;font-size:13px;color:var(--acc)}
 .go.send.arm{border-color:var(--warn);color:var(--warn)}
-/* ticker */
-.tick{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--p)}
+/* top tickers: stocks (TradingView tape) + headlines marquee */
+.tick{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--p);height:34px;position:relative}
+.tick .tradingview-widget-container{position:absolute;left:0;top:-7px;width:132%;transform:scale(.76);transform-origin:0 0}
+.tick::after{content:'';position:absolute;inset:auto 0 0 0;height:3px;background:var(--p)}
+#nbar{display:flex;align-items:stretch;height:32px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--p);min-width:0}
+#nbar .nlbl{flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--acc);background:var(--p2);border-right:1px solid var(--line);white-space:nowrap}
+#nbar .nlbl b{color:var(--bad);letter-spacing:0;font-size:12px}
+.nvp{flex:1;min-width:0;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent)}
+.ntrack{display:flex;width:max-content;height:100%;animation:nscroll var(--dur,120s) linear infinite;will-change:transform}
+#nbar:hover .ntrack,#nbar.paused .ntrack{animation-play-state:paused}
+@keyframes nscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ni{display:flex;align-items:center;gap:7px;height:100%;padding:0 18px 0 0;margin:0;background:none;border:0;color:var(--fg);font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
+.ni::before{content:"";width:5px;height:5px;border-radius:50%;background:#33536f;flex:none;margin-right:4px}
+.ni .ns{font-size:10.5px;letter-spacing:1px;color:var(--mut);text-transform:uppercase}
+.ni.red{color:#ff6b6b;font-weight:700}
+.ni.red .ns{color:#fca5a5}
+.ni.red::before{display:none}
+.ni svg.warn{width:16px;height:16px;flex:none;fill:#dc2626;stroke:#fff;stroke-width:1.6}
+/* in-page reader */
+#rdr{position:fixed;inset:0;z-index:9999;background:rgba(2,5,9,.78);display:flex;align-items:center;justify-content:center;padding:12px}
+#rdr[hidden]{display:none}
+.rbox{position:relative;width:min(760px,100%);max-height:calc(100vh - 24px);overflow:auto;background:var(--p);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.6);padding:16px 18px 18px}
+.rbox.red{border-color:#dc2626;box-shadow:0 0 0 1px #dc2626,0 10px 40px rgba(220,38,38,.25)}
+.rtop{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rsrc{font-size:13px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;flex:1;min-width:0}
+.rflag{display:none;align-items:center;gap:6px;color:#fecaca;background:#7f1d1d;border:1px solid #dc2626;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;margin-bottom:8px}
+.rbox.red .rflag{display:inline-flex}
+.rclose{flex:none;display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;border-radius:12px;background:var(--p2);border:1px solid var(--line);color:var(--fg);font-size:17px;font-weight:700;cursor:pointer}
+.rclose:hover{border-color:var(--acc)}
+.rbox h2{margin:0 0 8px;font-size:clamp(20px,2.6vw,28px);line-height:1.2}
+.rbox.red h2{color:#ff7a7a}
+.rbox img{display:block;width:100%;max-height:42vh;object-fit:cover;border-radius:10px;margin:4px 0 10px;background:#071018}
+.rbox p{font-size:17px;line-height:1.5;color:#cfdbe7;margin:0 0 14px}
+.ropen{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 22px;border-radius:12px;background:var(--acc);color:#02141a;font-weight:800;font-size:17px;text-decoration:none}
 /* grid (full screen): TeslaNav | Miracle Whip nav + fleet | aviation/HQ | markets/news */
 .grid{display:grid;grid-template-columns:1.45fr 1.25fr 1fr 1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:8px;min-height:0}
 .p-nav{grid-column:1;grid-row:1/3}.p-fleet{grid-column:2;grid-row:1/3}.p-avx{grid-column:3;grid-row:1}.p-hq{grid-column:3;grid-row:2}.p-mkt{grid-column:4;grid-row:1}.p-news{grid-column:4;grid-row:2}
@@ -134,6 +166,8 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
   .app{height:auto;min-height:100vh;display:flex;flex-direction:column;padding:5px 6px 10px;gap:5px}
   .app>*{min-width:0;flex:none}
+  #stk{order:-2;height:32px}
+  #nbar{order:-1;height:30px}
   header{order:1;padding:4px 10px;gap:clamp(6px,1vw,12px);border-radius:11px}
   .brand b{font-size:clamp(13px,1.5vw,18px);letter-spacing:1.5px}
   .brand span{font-size:9px;letter-spacing:2.5px}
@@ -147,17 +181,16 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   #kbyg .lbl{font-size:9px;letter-spacing:2px}
   #kmin{font-size:clamp(17px,2vw,22px)}
   #kmsg{font-size:12px}
-  .go{height:48px;min-width:clamp(70px,9vw,96px);padding:0 8px;font-size:13px;border-radius:10px}
+  .go{height:44px;min-width:clamp(70px,9vw,96px);padding:0 8px;font-size:13px;border-radius:10px}
   .go b{font-size:clamp(15px,1.8vw,19px)}
   .go span{font-size:12px}
   .go.send{min-width:60px;font-size:12px}
   .grid{order:3;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);grid-template-rows:none;grid-auto-rows:auto;gap:5px;min-height:0}
   .grid>.panel{grid-column:auto;grid-row:auto;border-radius:11px}
-  .p-nav,.p-fleet{height:clamp(360px,calc(100vh - 124px),760px)}
+  .p-nav,.p-fleet{height:clamp(360px,calc(100vh - 198px),760px)}
   .p-avx{min-height:300px}
   .p-hq,.p-mkt{height:clamp(320px,62vh,520px)}
   .p-news{min-height:260px}
-  .tick{order:4;height:46px}
   .ph{padding:4px 10px;font-size:11px;letter-spacing:2px}
   #fleet{padding:5px 6px;gap:5px}
   #tnr{min-height:38px;padding:4px 8px;gap:8px}
@@ -167,7 +200,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   .ftile .big{font-size:16px}
   #avline{font-size:12px}
 }
-@media (max-width:1299px) and (min-height:760px){ .p-nav,.p-fleet{height:clamp(360px,calc(100vh - 150px),900px)} }
+@media (max-width:1299px) and (min-height:760px){ .p-nav,.p-fleet{height:clamp(360px,calc(100vh - 226px),900px)} }
 @media (max-width:820px){
   .grid{grid-template-columns:minmax(0,1fr)}
   header,#kbyg{flex-wrap:wrap}
@@ -176,13 +209,18 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 }
 /* short full-screen windows */
 @media (min-width:1300px) and (max-height:760px){
-  .app{grid-template-rows:56px 58px 40px minmax(0,1fr);gap:6px;padding:6px 8px 8px}
+  .app{grid-template-rows:32px 30px 56px 58px minmax(0,1fr);gap:6px;padding:6px 8px 8px}
   .brand b{font-size:18px}#clock{font-size:34px}#wx .t{font-size:26px}.hbtn{height:42px}.go{height:48px}
 }
 </style>
 </head>
 <body>
 <div class="app">
+<div class="tick" id="stk"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+<script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+{"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq 100"},{"proName":"FOREXCOM:DJI","title":"Dow"},{"proName":"NASDAQ:TSLA","title":"TSLA"},{"proName":"NASDAQ:NVDA","title":"NVDA"},{"proName":"TVC:US10Y","title":"US 10Y"},{"proName":"TVC:USOIL","title":"Oil"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"}],"showSymbolLogo":true,"isTransparent":true,"displayMode":"compact","colorTheme":"dark","locale":"en"}
+</script></div></div>
+<div id="nbar"><span class="nlbl"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/></svg>Headlines<b id="nred"></b></span><div class="nvp"><div class="ntrack" id="ntrack"><span class="ni"><span class="ns">loading</span> Today&rsquo;s headlines…</span></div></div></div>
 <header>
   <div class="dot"></div>
   <div class="brand"><b>Miracle Whip</b><span>Mission Control</span></div>
@@ -198,10 +236,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 
 <div id="kbyg"><div class="khead"><span class="lbl">Know before you go</span><span id="kmin">…</span><span id="kmsg"></span></div><div id="kbtn"></div></div>
 
-<div class="tick"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
-<script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-{"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq 100"},{"proName":"FOREXCOM:DJI","title":"Dow"},{"proName":"NASDAQ:TSLA","title":"TSLA"},{"proName":"NASDAQ:NVDA","title":"NVDA"},{"proName":"TVC:US10Y","title":"US 10Y"},{"proName":"TVC:USOIL","title":"Oil"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"}],"showSymbolLogo":true,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"en"}
-</script></div></div>
+
 
 <div class="grid">
   <section class="panel p-nav">
@@ -421,9 +456,58 @@ sub=(f?(f.road?'fastest via '+f.road:'')+(f.delay_min?` · +${f.delay_min} min t
 btn.innerHTML=tabs()+gym+sendBtn(dest,(dest==='work'?'Work':'Home')+' to<br>car');}
 mn.textContent=head;msg.textContent=sub.replace(/^ · /,'');}
 
+/* ===== headline ticker (Worker /news: NYT, BBC, NPR, CNBC, FOX 13 Tampa Bay; public, cached 5 min) ===== */
+const LOCAL_RX=/\b(tampa|pinellas|clearwater|st\.? ?pete(rsburg)?|tarpon|hillsborough|pasco|dunedin|palm harbor|largo|bay area|sarasota|manatee|hernando)\b/i;
+const FL_RX=/\b(florida|tampa|pinellas|clearwater|st\.? ?pete(rsburg)?|gulf coast|bay area|tarpon|hillsborough|pasco|sarasota|fort myers|keys)\b/i;
+/* Conservative "big deal" rules. Returns a short reason or null. */
+function bigDeal(n){const t=n.title||'',d=n.desc||'',td=t+' '+d;
+ if(/^\s*(breaking|developing)\b|\bbreaking news\b/i.test(t)||(n.cats||[]).some(c=>/^breaking/i.test(c)))return 'Breaking';
+ if(/\b(declares? war|war (breaks out|erupts)|invad(es|ed|ing)|invasion of|missile (strike|attack)s?|ballistic missile|nuclear (strike|attack|test)|terror(ist)? attack|mass shooting|coup)\b/i.test(t))return 'War / attack';
+ if(/\bearthquake\b/i.test(t)&&/\b(magnitude[- ]?[6-9]|[6-9]\.\d|tsunami|kill|dead|deaths)\b/i.test(td))return 'Major earthquake';
+ if(/\b(hurricane|tropical storm|storm surge|tropical depression)\b/i.test(t)&&FL_RX.test(td))return 'Storm threat · Florida';
+ if(/\b(hurricane|storm surge|tropical storm) (warning|watch)\b/i.test(t))return 'Storm warning';
+ if(/\b(dow|s&p( 500)?|nasdaq|stock market|wall street|stocks)\b/i.test(t)&&!/\b(shares|stock) of\b/i.test(t)){
+   const pct=[...t.matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map(m=>+m[1]);
+   if(/\b(crash|circuit breaker|trading halt(ed)?|bear market)\b/i.test(t))return 'Market crash';
+   if(/\b(plunge|plummet|tumble|sink|drop|fall|slide|sell-?off|rout|tank)s?\b|\bfell\b|\bdown\b/i.test(t)&&pct.some(p=>p>=2&&p<50))return 'Market drop ≥2%';}
+ if(/\b(fed|federal reserve|fomc|powell)\b/i.test(t)&&/\b(cuts?|raises?|hikes?|holds?|keeps?|leaves?)\b.*\brates?\b|\brate (cut|hike|decision)\b/i.test(t))return 'Fed rate decision';
+ if(/\b(tesla|spacex|starship|elon musk|musk)\b/i.test(t)&&/\b(recalls?|recalling|explo(des|ded|sion)|crash(es|ed)?|probe|investigation|plunges?|soars?|surges?|earnings|bankrupt|resigns?|steps down|ban(s|ned)?|robotaxi (launch|approval|halt))\b/i.test(t))return 'Tesla / SpaceX';
+ if(/\bground stop\b|\b(faa|tsa)\b.*\b(grounds?|grounding|halts?)\b|\bairspace (closed|closure)\b|\bflights? (halted|grounded)\b/i.test(t))return 'FAA / airspace';
+ if(LOCAL_RX.test(td)&&/\b(evacuat\w*|boil[- ]water|tornado|flash flood|shelter in place|manhunt|amber alert|active shooter|hazmat|state of emergency|sinkhole swallows)\b/i.test(t))return 'Local emergency';
+ return null;}
+let NEWS=[];
+function wbase(){try{return localStorage.getItem(WK_URL)||WORKER_DEFAULT}catch(e){return WORKER_DEFAULT}}
+const WARN_SVG='<svg class="warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/></svg>';
+function relT(iso){if(!iso)return '';const m=Math.round((Date.now()-Date.parse(iso))/60000);return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+async function headlines(){try{
+ const r=await fetch(wbase()+'/news');if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();
+ const by={};for(const n of j.items||[]){(by[n.src]=by[n.src]||[]).push(n);}
+ const srcs=Object.keys(by),out=[],seen=new Set();
+ for(let i=0;out.length<40&&srcs.some(s=>by[s][i]);i++)for(const s of srcs){const n=by[s][i];if(!n)continue;const key=n.title.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ').slice(0,5).join(' ');if(seen.has(key))continue;seen.add(key);n.flag=bigDeal(n);out.push(n);}
+ NEWS=[...out.filter(n=>n.flag),...out.filter(n=>!n.flag)];
+ const reds=NEWS.filter(n=>n.flag).length;document.getElementById('nred').textContent=reds?reds+' alert'+(reds>1?'s':''):'';
+ const one=NEWS.map((n,i)=>`<button type="button" class="ni${n.flag?' red':''}" data-i="${i}">${n.flag?WARN_SVG:''}<span class="ns">${esc(n.src)}</span>${esc(n.title)}</button>`).join('');
+ const tr=document.getElementById('ntrack');tr.innerHTML=one+one;
+ requestAnimationFrame(()=>{const w=tr.scrollWidth/2;tr.style.setProperty('--dur',Math.max(40,Math.round(w/70))+'s');});
+}catch(e){if(!NEWS.length)document.getElementById('ntrack').innerHTML='<span class="ni"><span class="ns">offline</span>Headlines unavailable right now</span>';}}
+function openReader(n){const b=document.getElementById('rbox');b.classList.toggle('red',!!n.flag);
+ document.getElementById('rwhy').textContent=n.flag||'';
+ document.getElementById('rsrc').textContent=n.src+(n.time?' · '+new Date(n.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+' ET · '+relT(n.time):'');
+ document.getElementById('rh').textContent=n.title;document.getElementById('rdesc').textContent=n.desc||'No summary in the feed. Tap below to read the full story.';
+ const im=document.getElementById('rimg');if(n.img){im.src=n.img;im.hidden=false;im.onerror=()=>{im.hidden=true};}else{im.hidden=true;im.removeAttribute('src');}
+ document.getElementById('ropen').href=n.link;document.getElementById('rdr').hidden=false;document.getElementById('nbar').classList.add('paused');}
+function closeReader(){document.getElementById('rdr').hidden=true;document.getElementById('nbar').classList.remove('paused');}
+(function(){const bar=document.getElementById('nbar');let t=null;
+ bar.addEventListener('touchstart',()=>{clearTimeout(t);bar.classList.add('paused');},{passive:true});
+ bar.addEventListener('touchend',()=>{clearTimeout(t);t=setTimeout(()=>{if(document.getElementById('rdr').hidden)bar.classList.remove('paused');},4000);},{passive:true});
+ document.getElementById('ntrack').addEventListener('click',e=>{const b=e.target.closest('.ni[data-i]');if(b)openReader(NEWS[+b.dataset.i]);});
+ addEventListener('DOMContentLoaded',()=>{document.getElementById('rclose').addEventListener('click',closeReader);
+ document.getElementById('rdr').addEventListener('click',e=>{if(e.target.id==='rdr')closeReader();});});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader();});})();
+
 let lastDest=kDest();
-wx();avx();fleet();news();kbyg();loadEta();navPoll();
-setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);
+wx();avx();fleet();news();headlines();kbyg();loadEta();navPoll();
+setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);setInterval(()=>{if(!document.hidden)headlines();},5*60e3);
 setInterval(()=>{if(!document.hidden)fleet();},2*60e3);
 setInterval(navPoll,30e3);
 setInterval(loadEta,3*60e3);
@@ -452,6 +536,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){navPoll()
   </form>
   <div id="pairmsg">Enter the 6-digit code (valid 10 min, works once).</div>
 </div>
+<div id="rdr" hidden role="dialog" aria-modal="true" aria-labelledby="rh"><div class="rbox" id="rbox">
+  <div class="rtop"><span class="rsrc" id="rsrc"></span><button class="rclose" id="rclose" type="button"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Close</button></div>
+  <span class="rflag" id="rflag"><svg class="warn" viewBox="0 0 24 24" style="width:15px;height:15px;fill:#dc2626;stroke:#fff;stroke-width:1.6"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/></svg><span id="rwhy">Big deal</span></span>
+  <h2 id="rh"></h2><img id="rimg" alt="" hidden><p id="rdesc"></p>
+  <a class="ropen" id="ropen" href="#" target="_blank" rel="noopener">Open full article <svg class="i" viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+</div></div>
 <script>
 function pairShow(on){const b=document.getElementById('pairbox');b.hidden=!on;if(on){const m=document.getElementById('pairmsg');m.className='';m.textContent='Enter the 6-digit code (valid 10 min, works once).';setTimeout(()=>document.getElementById('paircode').focus(),50);}}
 (function(){const f=document.getElementById('pairform'),i=document.getElementById('paircode'),g=document.getElementById('pairgo'),m=document.getElementById('pairmsg');
