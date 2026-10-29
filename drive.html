@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drive View</title><style>
+html,body{margin:0;height:100%;background:#0b0d10;color:#eee;font-family:system-ui,sans-serif}
+.wrap{display:grid;grid-template-columns:2fr 1fr;height:100vh;gap:6px;padding:6px;box-sizing:border-box}
+iframe{width:100%;height:100%;border:0;border-radius:10px;background:#111}
+.side{display:grid;grid-template-rows:auto 1fr auto;gap:6px;min-height:0}
+#clock{font-size:42px;font-weight:700;text-align:center;padding:6px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btns a{display:block;background:#1d2430;color:#fff;text-decoration:none;text-align:center;padding:16px 4px;border-radius:10px;font-size:20px}
+</style></head><body><div class="wrap">
+<iframe src="https://teslanav.com/" allow="geolocation; fullscreen" title="TeslaNav"></iframe>
+<div class="side"><div id="clock"></div>
+<iframe src="https://embed.windy.com/embed2.html?lat=28.05&lon=-82.7&zoom=8&overlay=radar&level=surface&menu=&message=true&marker=&calendar=now&type=map&location=coordinates&metricWind=mph&metricTemp=%C2%B0F" title="Radar"></iframe>
+<div class="btns"><a href="./">Dashboard</a><a href="https://westonwhite.github.io/flight-brief/">Flight Brief</a><a href="https://music.youtube.com/">YT Music</a><a href="https://my.tessie.com/">Tessie</a></div></div></div>
+<script>function t(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})}t();setInterval(t,15000)</script>
+</body></html>
