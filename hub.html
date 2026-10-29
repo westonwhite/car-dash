@@ -121,6 +121,19 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 .news a.h:last-child{border-bottom:0}
 .news .tag{font-size:10px;letter-spacing:2px;color:var(--warn);text-transform:uppercase;display:block;margin-bottom:2px}
 .tv{height:100%}
+.mv{display:flex;flex-direction:column;padding:6px 8px 6px;gap:6px}
+.mvtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:none}
+.mvtabs button{height:34px;border-radius:9px;border:1px solid var(--line);background:var(--p2);color:var(--mut);font:600 13px/1 inherit;font-family:inherit;letter-spacing:.5px;cursor:pointer}
+.mvtabs button.on{color:#04111a;background:var(--acc);border-color:var(--acc)}
+.mvlist{flex:1;min-height:0;display:grid;grid-template-rows:repeat(10,minmax(0,1fr));overflow-y:auto;-webkit-overflow-scrolling:touch}
+.mvr{display:grid;grid-template-columns:minmax(52px,auto) minmax(0,1fr) auto 74px;align-items:center;gap:8px;padding:0 4px;min-height:22px;border-bottom:1px solid rgba(21,50,74,.55);text-decoration:none;color:var(--fg);font-size:13px}
+.mvr:last-child{border-bottom:0}
+.mvr b{font-weight:700;letter-spacing:.3px}
+.mvr .nm{color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvr .px{font-variant-numeric:tabular-nums;text-align:right}
+.mvr .pc{font-variant-numeric:tabular-nums;text-align:right;font-weight:700;border-radius:6px;padding:2px 6px;font-size:12.5px}
+.mvr .pc.up{color:#3ddc97;background:rgba(61,220,151,.12)}.mvr .pc.dn{color:#ff6b6b;background:rgba(255,107,107,.12)}
+.mvmsg{color:var(--mut);font-size:13px;padding:10px 4px;grid-row:1/-1}
 .split{display:grid;grid-template-rows:1.25fr 1fr;height:100%}
 .split>div{min-height:0;position:relative}
 .split>div+div{border-top:1px solid var(--line)}
@@ -261,19 +274,10 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   </section>
 
   <section class="panel p-mkt">
-    <div class="ph"><i class="pd"></i>Markets · top movers<span class="src">TradingView widgets</span></div>
-    <div class="pb"><div class="split">
-      <div><div class="tradingview-widget-container tv"><div class="tradingview-widget-container__widget tv"></div>
-      <script src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>
-      {"colorTheme":"dark","dateRange":"1D","exchange":"US","showChart":false,"locale":"en","isTransparent":true,"showSymbolLogo":true,"showFloatingTooltip":false,"width":"100%","height":"100%"}
-      </script></div></div>
-      <div><div class="tradingview-widget-container tv"><div class="tradingview-widget-container__widget tv"></div>
-      <script src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-      {"feedMode":"market","market":"stock","isTransparent":true,"displayMode":"compact","width":"100%","height":"100%","colorTheme":"dark","locale":"en"}
-      </script></div></div>
-    </div></div>
+    <div class="ph"><i class="pd"></i>Markets · top movers<span class="src" id="mvsrc">Yahoo Finance</span></div>
+    <div class="pb mv"><div class="mvtabs" id="mvtabs"><button type="button" data-k="gainers" class="on">Gainers</button><button type="button" data-k="active">Active</button><button type="button" data-k="losers">Losers</button></div>
+      <div class="mvlist" id="mvlist"><div class="mvmsg">Loading movers…</div></div></div>
   </section>
-
   <section class="panel p-news">
     <div class="ph"><i class="pd"></i>Headlines<span class="src">NYT RSS</span></div>
     <div class="pb scroll news" id="news"><div class="err">Loading headlines…</div></div>
@@ -505,9 +509,20 @@ function closeReader(){document.getElementById('rdr').hidden=true;document.getEl
  document.getElementById('rdr').addEventListener('click',e=>{if(e.target.id==='rdr')closeReader();});});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader();});})();
 
+// ---- Market movers (plain HTML via Worker /movers; no iframe scrolling) ----
+let MV=null,mvK=localStorage.getItem('MV_TAB')||'gainers';
+function mvRender(){const L=document.getElementById('mvlist');if(!L)return;
+ document.querySelectorAll('#mvtabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===mvK));
+ const rows=(MV&&MV[mvK])||[];if(!rows.length){L.innerHTML='<div class="mvmsg">'+(MV?'No data right now':'Movers unavailable right now')+'</div>';return;}
+ const f=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:0}):n.toFixed(2);
+ L.innerHTML=rows.slice(0,10).map(r=>'<a class="mvr" target="_blank" rel="noopener" href="https://finance.yahoo.com/quote/'+encodeURIComponent(r.s)+'"><b>'+esc(r.s)+'</b><span class="nm">'+esc(r.n)+'</span><span class="px">'+f(r.p)+'</span><span class="pc '+(r.pc>=0?'up':'dn')+'">'+(r.pc>=0?'+':'')+r.pc.toFixed(2)+'%</span></a>').join('');}
+async function movers(){try{const r=await fetch(wbase()+'/movers',{cache:'no-store'});if(!r.ok)throw 0;MV=await r.json();
+ const t=new Date(MV.ts);document.getElementById('mvsrc').textContent='Yahoo Finance · '+t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+(MV.stale?' (stale)':'');}catch(e){}
+ mvRender();}
+document.getElementById('mvtabs').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b)return;mvK=b.dataset.k;localStorage.setItem('MV_TAB',mvK);mvRender();});
 let lastDest=kDest();
-wx();avx();fleet();news();headlines();kbyg();loadEta();navPoll();
-setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);setInterval(()=>{if(!document.hidden)headlines();},5*60e3);
+wx();avx();fleet();news();headlines();movers();kbyg();loadEta();navPoll();
+setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);setInterval(()=>{if(!document.hidden)headlines();},5*60e3);setInterval(()=>{if(!document.hidden)movers();},3*60e3);
 setInterval(()=>{if(!document.hidden)fleet();},2*60e3);
 setInterval(navPoll,30e3);
 setInterval(loadEta,3*60e3);
