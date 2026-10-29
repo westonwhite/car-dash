@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Miracle Whip · Mission Control</title>
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#04070c;--p:#0a1119;--p2:#0f1924;--line:#15324a;--fg:#e8f1fa;--mut:#7f93a8;--acc:#22d3ee;--acc2:#3ea6ff;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--mag:#e879f9;--r:14px}
 *{box-sizing:border-box}
@@ -82,6 +83,21 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 .split>div{min-height:0;position:relative}
 .split>div+div{border-top:1px solid var(--line)}
 .err{color:var(--mut);font-size:14px;padding:10px}
+/* live fleet (Tessie via private Worker) */
+#fleet{display:flex;flex-direction:column;gap:6px;overflow:auto}
+#fmap{height:42%;min-height:120px;flex:none;border-radius:10px;border:1px solid var(--line);background:#071018}
+#fmap .leaflet-tile-pane{filter:brightness(.75) invert(1) contrast(.9) hue-rotate(195deg) saturate(.35)}
+.leaflet-container{font:12px/1.3 -apple-system,"Segoe UI",Roboto,sans-serif}
+.cpin{background:#0a1119;border:2px solid var(--acc);border-radius:12px;color:#e8f1fa;font-weight:700;font-size:11px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 8px rgba(34,211,238,.5);transform:translate(-50%,-50%);display:inline-block}
+.ftiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ftile{background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:6px 8px;min-width:0}
+.ftile .nm{display:block;font-size:13px;font-weight:700;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftile .big{font-size:20px;font-weight:800}
+.ftile .st{display:inline-block;margin-top:4px;font-size:11px;padding:2px 6px}
+.st.online{color:var(--ok);border-color:var(--ok)}.st.asleep,.st.offline{color:var(--mut)}
+.fbar{display:flex;gap:6px;align-items:center}
+.fbtn{margin-left:auto;background:var(--p2);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:2px 10px;font-size:13px;cursor:pointer;letter-spacing:0;text-transform:none}
+.np{font-size:12px;color:var(--warn)}
 </style>
 </head>
 <body>
@@ -118,7 +134,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
   </section>
 
   <section class="panel">
-    <div class="ph">◈ Fleet insights<span class="src" id="fupd">fleet.json</span></div>
+    <div class="ph">◈ Fleet insights<span class="src" id="fupd">fleet.json</span><button class="fbtn" id="frefresh" onclick="fleet()" title="Refresh fleet">⟳</button></div>
     <div class="pb scroll" id="fleet"><div class="err">Loading fleet…</div></div>
   </section>
 
@@ -154,6 +170,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const tz='America/New_York';
 const WORK='28.0107,-82.7287', HOME='Tarpon Springs, FL 34689', GYM='Crunch Fitness Countryside Mall, Clearwater, FL';
@@ -209,14 +226,38 @@ avxEl.innerHTML=res.map((m,i)=>m&&m.raw?`<div class="row"><span class="cat ${m.c
 +`<div class="mini"><a href="https://aviationweather.gov/data/metar/?ids=KCLW,KPIE,KTPA&hours=0&decoded=yes">AWC ↗</a><a href="https://skyvector.com/?chart=301">SkyVector ↗</a><a href="https://westonwhite.github.io/flight-brief/">Brief ↗</a></div>`;
 KCLW=res[0];renderFleet();kbyg();}
 
-/* fleet: Teslas from sanitized fleet.json + the Comanche */
-let FLEET=null;
-async function fleet(){try{FLEET=await (await fetch('fleet.json?'+Date.now())).json();}catch(e){FLEET={cars:[]};}renderFleet();}
-function ago(iso){const m=Math.round((Date.now()-new Date(iso))/60000);return m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago';}
+/* fleet: live Teslas from the private Tessie Worker (key paired via hub.html#k=…), fleet.json fallback, + the Comanche.
+   The key is never in this repo: a one-time pairing link saves it to this browser's localStorage. */
+const WK_KEY='tesla_worker_key',WK_URL='tesla_worker_url',WORKER_DEFAULT='https://tesla-fleet.smithfleet.workers.dev';
+(function pair(){const h=new URLSearchParams(location.hash.slice(1));if(!h.has('k')&&!h.has('unpair'))return;
+try{if(h.has('unpair')){localStorage.removeItem(WK_KEY);localStorage.removeItem(WK_URL);}
+else{localStorage.setItem(WK_KEY,h.get('k'));if(h.get('w'))localStorage.setItem(WK_URL,h.get('w'));}}catch(e){}
+history.replaceState(null,'',location.pathname+location.search);})();
+const wkey=()=>{try{return localStorage.getItem(WK_KEY)||''}catch(e){return ''}};
+const wurl=()=>{try{return (localStorage.getItem(WK_URL)||WORKER_DEFAULT).replace(/\/+$/,'')}catch(e){return WORKER_DEFAULT}};
+let FLEET=null,FMAP=null,FLAYER=null;
+async function fleet(){const k=wkey();const btn=document.getElementById('frefresh');if(btn)btn.disabled=true;
+try{if(k){const r=await fetch(wurl()+'/fleet',{headers:{'X-Access-Key':k},cache:'no-store'});
+if(!r.ok)throw new Error(r.status===401?'key rejected':'HTTP '+r.status);
+const j=await r.json();FLEET={live:true,updated:j.fetched_at,cars:j.cars||[]};}
+else throw new Error('Not paired');}
+catch(e){let snap={cars:[]};try{snap=await (await fetch('fleet.json?'+Date.now())).json();}catch(_){}
+FLEET={live:false,why:e.message,updated:snap.updated,cars:(snap.cars||[]).map(c=>({name:c.name,battery_level:c.battery,est_range_mi:c.range_mi,charging_state:c.charging,state:c.status}))};}
+if(btn)btn.disabled=false;renderFleet();}
+function ago(iso){const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago';}
+function carStatus(c){if(c.charging_state==='Charging')return 'charging';if(c.shift_state&&c.shift_state!=='P'||(c.speed||0)>0)return 'driving';return c.state||'—';}
+function renderMap(cars){const el=document.getElementById('fmap');if(!el||!window.L)return;
+if(!FMAP){FMAP=L.map(el,{zoomControl:false,attributionControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(FMAP);FLAYER=L.layerGroup().addTo(FMAP);}
+FLAYER.clearLayers();const pts=[];
+cars.filter(c=>c.lat!=null&&c.lon!=null).forEach(c=>{pts.push([c.lat,c.lon]);
+L.marker([c.lat,c.lon],{icon:L.divIcon({className:'',html:`<span class="cpin">${esc(c.name)} · ${c.battery_level??'—'}%</span>`,iconSize:[0,0]})}).addTo(FLAYER)
+.bindPopup(`<b>${esc(c.name)}</b><br>${c.battery_level??'—'}% · ${Math.round(c.est_range_mi||0)} mi<br>${carStatus(c)}${c.locked===false?' · UNLOCKED':''}<br>${c.updated?ago(c.updated):''}`);});
+if(pts.length>1)FMAP.fitBounds(pts,{padding:[40,40],maxZoom:13});else if(pts.length)FMAP.setView(pts[0],13);else FMAP.setView([28.08,-82.7],10);
+setTimeout(()=>FMAP.invalidateSize(),50);}
 function renderFleet(){const el=document.getElementById('fleet');if(!FLEET)return;
-if(FLEET.updated)document.getElementById('fupd').textContent='Tessie snapshot · '+ago(FLEET.updated);
+const up=document.getElementById('fupd');up.textContent=FLEET.live?'Tessie live · '+ago(FLEET.updated):(FLEET.why==='Not paired'?'Not paired · fleet.json':'Worker '+FLEET.why+' · fleet.json')+(FLEET.updated?' · '+ago(FLEET.updated):'');
 const col=b=>b>=50?'var(--ok)':b>=25?'var(--warn)':'var(--bad)';
-let h=(FLEET.cars||[]).map(c=>`<div class="row car"><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><span class="nm">${esc(c.name)}</span><span class="mono" style="font-weight:700">${c.battery??'—'}%<span class="sub"> · ${c.range_mi??'—'} mi</span></span></div><div class="bar"><i style="width:${c.battery||0}%;background:${col(c.battery||0)}"></i></div></div><span class="st ${c.status}">${c.status}${c.charging==='Charging'?' ⚡':''}</span></div>`).join('')||'<div class="err">No fleet.json yet</div>';
+const tiles=(FLEET.cars||[]).map(c=>{const b=c.battery_level,st=carStatus(c);return `<div class="ftile"><span class="nm">${esc(c.name)}</span><span class="big mono">${b??'—'}%</span><span class="sub"> ${c.est_range_mi!=null?Math.round(c.est_range_mi)+' mi':''}</span><div class="bar"><i style="width:${b||0}%;background:${col(b||0)}"></i></div><span class="st ${st}">${st}${c.charging_state==='Charging'?' ⚡':''}${c.locked===false?' 🔓':''}</span>${c.outside_temp_c!=null?`<span class="sub"> ${Math.round(c.outside_temp_c*9/5+32)}°</span>`:''}</div>`;}).join('')||'<div class="err">No fleet data</div>';
 let p='<div class="sub">Comanche wx loading…</div>';
 if(KCLW&&KCLW.raw){const m=KCLW,elev=71;let da='—',pa='—',xw='—';
 if(m.alt!=null&&m.t!=null){const PA=elev+(29.92-m.alt)*1000;const DA=PA+120*(m.t-(15-2*PA/1000));pa=Math.round(PA).toLocaleString();da=Math.round(DA/10)*10;da=da.toLocaleString()+' ft';}
@@ -224,7 +265,10 @@ if(m.wd&&m.wd!=='VRB'&&m.ws){const best=[160,340].map(r=>{const a=(+m.wd-r)*Math
 p=`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:700">✈ N7236P · Comanche 180</span><span class="cat ${m.cat}" style="margin-left:auto">${m.cat}</span></div>
 <div class="kv"><div>KCLW wind<b class="mono">${m.wind}</b></div><div>Density alt<b class="mono">${da}</b></div><div>Xwind rwy<b class="mono" style="font-size:14px">${xw}</b></div></div>
 <div class="mini"><a href="https://westonwhite.github.io/flight-brief/">Flight Brief ↗</a><a href="https://westonwhite.github.io/smiths-comanche-fall-trip-2026/">Comanche trip ↗</a></div>`;}
-el.innerHTML=h+`<div class="plane">${p}</div>`;}
+if(!document.getElementById('fmap')){el.innerHTML='<div id="fmap"></div><div id="fnp"></div><div class="ftiles" id="ftiles"></div><div class="plane" id="fplane"></div>';FMAP=null;}
+document.getElementById('fnp').innerHTML=FLEET.live?'':`<div class="np">${FLEET.why==='Not paired'?'Not paired — open the pairing link once on this browser. Showing fleet.json snapshot.':'Live data unavailable ('+esc(FLEET.why)+'). Showing fleet.json snapshot.'}</div>`;
+document.getElementById('ftiles').innerHTML=tiles;document.getElementById('fplane').innerHTML=p;
+renderMap(FLEET.live?FLEET.cars:[]);}
 
 /* headlines (NYT RSS sends Access-Control-Allow-Origin: *) */
 async function rss(u){const x=new DOMParser().parseFromString(await (await fetch(u)).text(),'text/xml');return [...x.querySelectorAll('item')].map(i=>({t:i.querySelector('title')?.textContent,l:i.querySelector('link')?.textContent}));}
@@ -248,7 +292,7 @@ else{const c=KCLW&&KCLW.cat;msg.innerHTML=`${!weekday?'🛩 Weekend':'☀ Midday
 btn.innerHTML=`<a class="go hi" href="https://westonwhite.github.io/flight-brief/">Flight Brief</a><a class="go" href="${gm(HOME)}">🏠 Home</a>`;}}
 
 wx();avx();fleet();news();kbyg();
-setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(fleet,5*60e3);setInterval(news,15*60e3);setInterval(()=>{routes();kbyg()},60e3);
+setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);setInterval(()=>{routes();kbyg()},60e3);
 </script>
 </body>
 </html>
