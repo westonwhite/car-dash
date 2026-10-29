@@ -195,8 +195,15 @@ const a=raw.match(/\bA(\d{4})\b/);if(a)o.alt=+a[1]/100;
 const vis=o.vis??10,c=ceil??99999;
 o.cat=(c<500||vis<1)?'LIFR':(c<1000||vis<3)?'IFR':(c<=3000||vis<=5)?'MVFR':'VFR';
 o.wind=o.wd?(o.ws===0?'Calm':`${o.wd==='VRB'?'VRB':o.wd+'°'} ${o.ws}${o.wg?'G'+o.wg:''} kt`):'—';return o;}
+function fromProps(p){const o={raw:(p.textDescription||'Obs')+' · NWS decoded (no raw METAR)'};const v=x=>x&&x.value!=null?x.value:null;
+const wd=v(p.windDirection),ws=v(p.windSpeed),wg=v(p.windGust);if(ws!=null){o.ws=Math.round(ws/1.852);o.wd=wd==null?'VRB':String(Math.round(wd/10)*10).padStart(3,'0');o.wg=wg?Math.round(wg/1.852):null;}
+const vis=v(p.visibility);o.vis=vis==null?null:Math.round(vis/1609.34*10)/10;
+let ceil=null;for(const l of p.cloudLayers||[]){if(['BKN','OVC','VV'].includes(l.amount)&&l.base&&l.base.value!=null){const b=Math.round(l.base.value*3.28084/100)*100;if(ceil===null||b<ceil)ceil=b;}}o.ceil=ceil;
+const t=v(p.temperature);if(t!=null)o.t=t;const bp=v(p.barometricPressure);if(bp)o.alt=Math.round(bp/3386.39*100)/100;
+const vv=o.vis??10,c=ceil??99999;o.cat=(c<500||vv<1)?'LIFR':(c<1000||vv<3)?'IFR':(c<=3000||vv<=5)?'MVFR':'VFR';
+o.wind=o.ws!=null?(o.ws===0?'Calm':`${o.wd==='VRB'?'VRB':o.wd+'°'} ${o.ws}${o.wg?'G'+o.wg:''} kt`):'—';return o;}
 async function avx(){const ids=['KCLW','KPIE','KTPA'];
-const res=await Promise.all(ids.map(id=>fetch(`https://api.weather.gov/stations/${id}/observations/latest`).then(r=>r.json()).then(j=>parseMetar(j.properties.rawMessage||'')).catch(()=>null)));
+const res=await Promise.all(ids.map(id=>fetch(`https://api.weather.gov/stations/${id}/observations/latest`).then(r=>r.json()).then(j=>j.properties.rawMessage?parseMetar(j.properties.rawMessage):fromProps(j.properties)).catch(()=>null)));
 const avxEl=document.getElementById("avx");
 avxEl.innerHTML=res.map((m,i)=>m&&m.raw?`<div class="row"><span class="cat ${m.cat}">${m.cat}</span><div style="min-width:0;flex:1"><div style="display:flex;gap:10px;align-items:baseline"><span class="id mono">${ids[i]}</span><span class="sub">${m.wind}${m.ceil?' · CIG '+m.ceil:''}${m.vis!=null?' · '+(m.vis>=10?'10+':m.vis)+' SM':''}</span></div><div class="raw mono">${esc(m.raw)}</div></div></div>`:`<div class="row"><span class="cat UNK">—</span><span class="id mono">${ids[i]}</span><a class="sub" href="https://aviationweather.gov/data/metar/?ids=${ids[i]}&decoded=yes">open METAR ↗</a></div>`).join('')
 +`<div class="mini"><a href="https://aviationweather.gov/data/metar/?ids=KCLW,KPIE,KTPA&hours=0&decoded=yes">AWC ↗</a><a href="https://skyvector.com/?chart=301">SkyVector ↗</a><a href="https://westonwhite.github.io/flight-brief/">Brief ↗</a></div>`;
@@ -213,9 +220,9 @@ let h=(FLEET.cars||[]).map(c=>`<div class="row car"><div style="flex:1;min-width
 let p='<div class="sub">Comanche wx loading…</div>';
 if(KCLW&&KCLW.raw){const m=KCLW,elev=71;let da='—',pa='—',xw='—';
 if(m.alt!=null&&m.t!=null){const PA=elev+(29.92-m.alt)*1000;const DA=PA+120*(m.t-(15-2*PA/1000));pa=Math.round(PA).toLocaleString();da=Math.round(DA/10)*10;da=da.toLocaleString()+' ft';}
-if(m.wd&&m.wd!=='VRB'&&m.ws){const best=[160,340].map(r=>{const a=(m.wd-r)*Math.PI/180;return{r:r/10,hw:Math.round(m.ws*Math.cos(a)),xw:Math.abs(Math.round(m.ws*Math.sin(a)))}}).sort((a,b)=>b.hw-a.hw)[0];xw=`Rwy ${best.r} · ${best.xw} kt X`;}else if(m.ws===0)xw='Calm';
+if(m.wd&&m.wd!=='VRB'&&m.ws){const best=[160,340].map(r=>{const a=(+m.wd-r)*Math.PI/180;return{r:r/10,hw:Math.round(m.ws*Math.cos(a)),xw:Math.abs(Math.round(m.ws*Math.sin(a)))}}).sort((a,b)=>b.hw-a.hw)[0];xw=`${best.r} · ${best.xw}kt`;}else if(m.ws===0)xw='Calm';
 p=`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:700">✈ N7236P · Comanche 180</span><span class="cat ${m.cat}" style="margin-left:auto">${m.cat}</span></div>
-<div class="kv"><div>KCLW wind<b class="mono">${m.wind}</b></div><div>Density alt<b class="mono">${da}</b></div><div>Xwind<b class="mono" style="font-size:14px">${xw}</b></div></div>
+<div class="kv"><div>KCLW wind<b class="mono">${m.wind}</b></div><div>Density alt<b class="mono">${da}</b></div><div>Xwind rwy<b class="mono" style="font-size:14px">${xw}</b></div></div>
 <div class="mini"><a href="https://westonwhite.github.io/flight-brief/">Flight Brief ↗</a><a href="https://westonwhite.github.io/smiths-comanche-fall-trip-2026/">Comanche trip ↗</a></div>`;}
 el.innerHTML=h+`<div class="plane">${p}</div>`;}
 
