@@ -9,13 +9,6 @@
    "status": "parked"
   },
   {
-   "name": "The Starship",
-   "battery": 65,
-   "range_mi": 140,
-   "charging": "Disconnected",
-   "status": "asleep"
-  },
-  {
    "name": "the miracle whip",
    "battery": 52,
    "range_mi": 173,
