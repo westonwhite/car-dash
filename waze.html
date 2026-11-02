@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Waze Live Map · Car Dash</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0b0d10;--card:#161a20;--card2:#1d232b;--fg:#f2f4f7;--mut:#9aa4b2;--acc:#3ea6ff;--waze:#33ccff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;height:100vh;padding:8px;gap:8px}
+nav{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+nav a,nav button{flex:1 1 0;min-width:140px;min-height:68px;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 14px;background:var(--card);color:var(--fg);border:2px solid #2a323d;border-radius:14px;font-weight:700;font-size:clamp(20px,1.9vw,26px);line-height:1.1;white-space:nowrap;font-family:inherit;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+nav a:active,nav button:active,nav a:hover,nav button:hover{background:var(--card2);border-color:var(--acc)}
+nav .back{background:#c62828;border-color:#c62828;color:#fff}
+nav .open{background:#0b5f7a;border-color:var(--waze);color:#fff}
+#zl{flex:0 0 auto;min-width:110px;min-height:68px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--mut);background:#12161b;border-radius:14px;padding:0 12px}
+#mapwrap{flex:1 1 auto;min-height:0;border-radius:14px;overflow:hidden;background:#111}
+iframe{display:block;width:100%;height:100%;border:0}
+</style>
+</head>
+<body>
+<nav>
+  <a class="back" href="./">⬅ Back to Dash</a>
+  <button id="recenter" type="button">🎯 Recenter</button>
+  <button id="zin" type="button">➕ Zoom In</button>
+  <button id="zout" type="button">➖ Zoom Out</button>
+  <div id="zl">Zoom 12</div>
+  <a class="open" id="open" href="https://www.waze.com/live-map/?ll=28.07,-82.73" target="_blank" rel="noopener">🚙 Open in Waze</a>
+</nav>
+<div id="mapwrap">
+  <iframe id="waze" title="Waze Live Map" allowfullscreen
+    src="https://embed.waze.com/iframe?zoom=12&lat=28.07&lon=-82.73"></iframe>
+</div>
+<script>
+// Official Waze Live Map iFrame (developers.google.com/waze/iframe). Zoom 3–17.
+const LAT=28.07, LON=-82.73, DEF=12, MIN=3, MAX=17;
+const q=new URLSearchParams(location.search);
+let z=parseInt(q.get('z'),10); if(!(z>=MIN&&z<=MAX)) z=DEF;
+const f=document.getElementById('waze');
+function load(){
+  f.src='https://embed.waze.com/iframe?zoom='+z+'&lat='+LAT+'&lon='+LON+'&_='+Date.now();
+  document.getElementById('zl').textContent='Zoom '+z;
+  const u=new URL(location.href); if(z===DEF)u.searchParams.delete('z'); else u.searchParams.set('z',z);
+  history.replaceState(null,'',u);
+}
+document.getElementById('recenter').onclick=()=>load();
+document.getElementById('zin').onclick=()=>{if(z<MAX){z++;load();}};
+document.getElementById('zout').onclick=()=>{if(z>MIN){z--;load();}};
+if(z!==DEF) load();
+</script>
+</body>
+</html>
