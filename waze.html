@@ -31,7 +31,9 @@ nav .seg{display:flex;gap:8px;flex:2 1 0;min-width:300px}
 #stamp .smp{background:#4a148c;border-color:#ce93d8}
 #stamp .rt{font-weight:600}
 #stamp .rt.best{border-color:#66bb6a}
-#legend{position:absolute;z-index:500;bottom:22px;left:10px;background:rgba(11,13,16,.88);border:2px solid #2a323d;border-radius:12px;padding:8px 12px;font-size:19px;display:flex;gap:14px;pointer-events:none}
+#legend{position:absolute;z-index:500;bottom:22px;left:10px;background:rgba(11,13,16,.88);border:2px solid #2a323d;border-radius:12px;padding:8px 12px;font-size:19px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#legend .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#legend i{display:inline-block;width:34px;height:8px;border-radius:4px;margin-right:6px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
 .wzi{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;font-size:30px;line-height:1;background:#fff;border:3px solid #111;box-shadow:0 2px 8px rgba(0,0,0,.6)}
 .wzi.police{background:#1e88e5;border-color:#fff;width:56px;height:56px;font-size:36px}
 .wzi.crash{background:#e53935;border-color:#fff}
@@ -39,7 +41,7 @@ nav .seg{display:flex;gap:8px;flex:2 1 0;min-width:300px}
 .wzi.construction{background:#fb8c00;border-color:#fff}
 .wzi.hazard{background:#fdd835;border-color:#333}
 .wzi.jam{background:#8e24aa;border-color:#fff}
-.stale-map .wzi{filter:grayscale(1);opacity:.55}
+.stale-map .wzi,.stale-map path.jamln{filter:grayscale(1);opacity:.55}
 .leaflet-container{font:inherit}
 .leaflet-popup-content{font-size:20px}
 </style>
@@ -60,12 +62,13 @@ nav .seg{display:flex;gap:8px;flex:2 1 0;min-width:300px}
 <div id="mapwrap">
   <div id="copmap"></div>
   <div id="stamp"><span>Loading Waze snapshot…</span></div>
-  <div id="legend">🚓 Police · 💥 Crash · ⛔ Closure · 🚧 Work · ⚠️ Hazard · 🐢 Jam</div>
+  <div id="legend"><div class="row"><span><i style="background:#ffd600"></i>Slow</span><span><i style="background:#ff8f00"></i>Heavy</span><span><i style="background:#e53935"></i>Very heavy</span><span><i style="background:#7f0000"></i>Standstill</span></div><div class="row">🚓 Police · 💥 Crash · ⛔ Closure · 🚧 Work · ⚠️ Hazard · 🐢 Jam</div></div>
   <iframe id="waze" class="hide" title="Waze Live Map" allowfullscreen></iframe>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Cop Map: Leaflet + OSM tiles with the weekday Waze snapshot (waze_data.js).
+// Cop Map: Leaflet + OSM tiles with the weekday Waze snapshot (waze_data.js): Waze jam segments as
+// colored lines (yellow slow -> dark red standstill) under the cop/hazard icons.
 // Live Waze: official Waze Live Map iFrame (developers.google.com/waze/iframe), zoom 3–17.
 const LAT=28.07, LON=-82.73, DEF=12, MIN=3, MAX=17;
 const q=new URLSearchParams(location.search);
@@ -75,11 +78,17 @@ const f=document.getElementById('waze'), cm=document.getElementById('copmap');
 const ICON={police:'🚓',crash:'💥',closure:'⛔',construction:'🚧',hazard:'⚠️',jam:'🐢'};
 const NAME={police:'Police',crash:'Crash',closure:'Closure',construction:'Roadwork',hazard:'Hazard',jam:'Jam'};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let map=null,layer=null;
+let map=null,layer=null,jl=null;
+/* jam severity 0..3 from speed_mph and/or delay_min (worst wins) */
+const SEV=[{c:'#ffd600',n:'Slow'},{c:'#ff8f00',n:'Heavy'},{c:'#e53935',n:'Very heavy'},{c:'#7f0000',n:'Standstill'}];
+function sev(j){let s=-1;
+  if(j.speed!=null)s=Math.max(s,j.speed<5?3:j.speed<15?2:j.speed<25?1:0);
+  if(j.delay!=null)s=Math.max(s,j.delay>10?3:j.delay>=6?2:j.delay>=3?1:0);
+  return s<0?1:s;}
 function initMap(){if(map||!window.L)return;
   map=L.map(cm,{zoomControl:false,attributionControl:true,zoomSnap:1}).setView([LAT,LON],DEF);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,subdomains:'abc',attribution:'© OpenStreetMap · Waze snapshot'}).addTo(map);
-  layer=L.layerGroup().addTo(map);map.on('zoomend',zlbl);}
+  jl=L.layerGroup().addTo(map);layer=L.layerGroup().addTo(map);map.on('zoomend',zlbl);}
 function liveSrc(){f.src='https://embed.waze.com/iframe?zoom='+lz+'&lat='+LAT+'&lon='+LON+'&_='+Date.now();}
 function zlbl(){document.getElementById('zl').textContent='Zoom '+(view==='live'?lz:(map?map.getZoom():DEF));}
 function url(){const u=new URL(location.href);
@@ -98,17 +107,23 @@ document.getElementById('zin').onclick=()=>{if(view==='live'){if(lz<MAX){lz++;li
 document.getElementById('zout').onclick=()=>{if(view==='live'){if(lz>MIN){lz--;liveSrc();}}else if(map)map.zoomOut();zlbl();url();};
 
 async function data(){const st=document.getElementById('stamp');const d=await WAZE.load();
-  if(!d.ok){st.innerHTML=`<span>${d.why==='unlinked'?'Waze snapshot not linked on this browser':'Waze snapshot '+esc(d.why)}</span>`;if(layer)layer.clearLayers();return;}
+  if(!d.ok){st.innerHTML=`<span>Waze snapshot ${esc(d.why)}</span>`;if(layer)layer.clearLayers();if(jl)jl.clearLayers();return;}
   let h=`<span>Updated ${esc(d.asOf||'?')}${d.stale?'':' today'}</span>`;
   if(d.stale)h+=`<span class="stale">Stale — from ${esc(d.dateNice)}</span>`;
   if(d.sample)h+=`<span class="smp">sample data</span>`;
   for(const r of d.routes){if(r.missing)continue;h+=`<span class="rt ${d.best===r.key&&!d.stale?'best':''}">${esc(r.label)}${r.minutes!=null?' '+r.minutes+' min':''}${r.cops?' · 🚓'+r.cops:''}${r.hazards?' · ⚠️'+r.hazards:''}</span>`;}
-  if(!d.items.length)h+='<span>No hazards reported</span>';
+  if(!d.items.length)h+='<span>No hazards reported</span>';else if(d.jams.length)h+=`<span>🐢 ${d.jams.length} jam${d.jams.length>1?'s':''}</span>`;
   st.innerHTML=h;
   cm.classList.toggle('stale-map',d.stale);
-  if(!layer)return;layer.clearLayers();
+  if(!layer)return;layer.clearLayers();jl.clearLayers();
+  /* jam lines: dark casing + 7px color, a wide invisible hit line for easy taps; drawn in the overlay pane (below icons) */
+  [...d.jams].sort((a,b)=>sev(a)-sev(b)).forEach(j=>{const v=sev(j),S=SEV[v];
+    const pop=`<b>🐢 ${S.n} traffic</b>${j.route?'<br>'+esc(j.route):''}${j.label?'<br>'+esc(j.label):''}${j.delay!=null?'<br>+'+j.delay+' min delay':''}${j.speed!=null?'<br>~'+j.speed+' mph':''}`;
+    L.polyline(j.line,{color:'#000',weight:11,opacity:.55,lineCap:'round',lineJoin:'round',interactive:false,className:'jamln'}).addTo(jl);
+    L.polyline(j.line,{color:S.c,weight:7,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false,className:'jamln'}).addTo(jl);
+    L.polyline(j.line,{color:'#000',weight:26,opacity:0}).bindPopup(pop).addTo(jl);});
   const order=['jam','hazard','construction','closure','crash','police'];   // police on top
-  [...d.items].sort((a,b)=>order.indexOf(a.type)-order.indexOf(b.type)).forEach(it=>{
+  [...d.items].filter(it=>!it.line).sort((a,b)=>order.indexOf(a.type)-order.indexOf(b.type)).forEach(it=>{
     const big=it.type==='police',sz=big?56:48;
     L.marker([it.lat,it.lon],{icon:L.divIcon({className:'',html:`<div class="wzi ${it.type}">${ICON[it.type]}</div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:big?1000:0})
      .bindPopup(`<b>${ICON[it.type]} ${NAME[it.type]}</b><br>${esc(it.label)}${it.route?'<br>'+esc(it.route):''}${it.delay>0?'<br>+'+it.delay+' min':''}`).addTo(layer);});}

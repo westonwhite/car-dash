@@ -132,7 +132,7 @@ el.className=d.ok&&d.stale?'stale':'';
 el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
 return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.delay>0?(best?' · ':'')+'+'+r.delay+' min traffic':''}${r.hazards?' · ⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?r.minutes+'<small> min</small>':'—'}</span></a>`;}).join('');
 asof.textContent=d.ok?'· as of '+(d.asOf||'?')+(d.sample?' · sample data':''):'';
-note.innerHTML=!d.ok?(d.why==='unlinked'?'Waze snapshot not linked on this browser.':'Waze snapshot '+e(d.why)+'.'):d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');}
+note.innerHTML=!d.ok?'Waze snapshot '+e(d.why)+'.':d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');}
 routes();setInterval(()=>{if(!document.hidden)routes();},5*60*1000);
 </script>
 </body>
