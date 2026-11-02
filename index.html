@@ -40,6 +40,17 @@ a.tile:active,a.tile:hover{background:var(--card2);border-color:var(--acc)}
 #rp.stale a.rt{opacity:.5;filter:grayscale(1)}
 #rp.stale a.rt.best{border-color:transparent;background:var(--card)}
 #rpnote{font-size:20px;color:var(--mut);margin:8px 4px 0}
+#rpbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+#rpbar .clk{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;background:var(--card);border:2px solid #2a323d;border-radius:14px;padding:6px 18px;line-height:1.1}
+#rpbar .clk small{font-size:20px;color:var(--mut);font-weight:600;margin-left:6px}
+#rpbar .chip{font-size:22px;font-weight:700;background:var(--card);border:2px solid #2a323d;border-radius:14px;padding:10px 16px}
+#rpbar .chip.mut{color:var(--mut);font-weight:600}
+#rpbar .chip.stale{background:#5d4037;border-color:#ffb74d;color:#ffe0b2}
+#rpst{font-size:22px;font-weight:700;padding:10px 6px}
+#rpst.ok{color:#81c784}#rpst.err{color:#ef9a9a}#rpst.busy{color:#90caf9}
+#rpref{margin-left:auto;min-height:72px;min-width:200px;font-size:28px;font-weight:800;font-family:inherit;color:#fff;background:#1565c0;border:3px solid #64b5f6;border-radius:16px;padding:8px 22px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#rpref:active,#rpref:hover{background:#1e88e5}
+#rpref:disabled{opacity:.6}
 #rpnote b{color:#ffcc80}
 footer{margin-top:28px;color:#5d6673;font-size:16px}
 footer a{color:#7c8794}
@@ -55,6 +66,7 @@ footer a{color:#7c8794}
 </header>
 
 <h2>🚦 Fastest route to work <span id="rpasof" style="text-transform:none;letter-spacing:0"></span></h2>
+<div id="rpbar"><span class="clk" id="rpclk">--:--<small>ET</small></span><span class="chip" id="rpupd">Data updated —</span><span class="chip mut" id="rpchk">checked —</span><span id="rpst"></span><button id="rpref" type="button">🔄 Refresh</button></div>
 <div id="rp"></div>
 <div id="rpnote"></div>
 
@@ -126,13 +138,24 @@ wx();setInterval(wx,10*60*1000);
 
 /* fastest-route rows from the weekday Waze snapshot (waze_data.js); tap a row for the Cop Map */
 async function routes(){const el=document.getElementById('rp'),note=document.getElementById('rpnote'),asof=document.getElementById('rpasof');
-const d=await WAZE.load();const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const d=await WAZE.load();rpChecked=WAZE.nowET(false);const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
 el.className=d.ok&&d.stale?'stale':'';
 el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
 return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.delay>0?(best?' · ':'')+'+'+r.delay+' min traffic':''}${r.hazards?' · ⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?r.minutes+'<small> min</small>':'—'}</span></a>`;}).join('');
-asof.textContent=d.ok?'· as of '+(d.asOf||'?')+(d.sample?' · sample data':''):'';
-note.innerHTML=!d.ok?'Waze snapshot '+e(d.why)+'.':d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');}
+asof.textContent=d.ok&&d.sample?'· sample data':'';
+const up=document.getElementById('rpupd');up.textContent=d.ok?'Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:''):'Data updated —';up.classList.toggle('stale',!!(d.ok&&d.stale));
+document.getElementById('rpchk').textContent='checked '+rpChecked;
+note.innerHTML=!d.ok?'Waze snapshot '+e(d.why)+'.':d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');return d;}
+let rpChecked='—',rpT=0;
+function rpClock(){document.getElementById('rpclk').innerHTML=WAZE.nowET(true)+'<small>ET</small>';}
+rpClock();setInterval(rpClock,1000);
+async function rpRefresh(){const b=document.getElementById('rpref'),st=document.getElementById('rpst');clearTimeout(rpT);
+ b.disabled=true;st.className='busy';st.textContent='Refreshing…';let d;
+ try{d=await routes();}catch(x){d={ok:false,why:'failed'};}
+ b.disabled=false;st.className=d&&d.ok?'ok':'err';st.textContent=d&&d.ok?'✓ Up to date':'⚠️ '+((d&&d.why)||'failed');
+ rpT=setTimeout(()=>{st.textContent='';st.className='';},6000);}
+document.getElementById('rpref').onclick=rpRefresh;
 routes();setInterval(()=>{if(!document.hidden)routes();},5*60*1000);
 </script>
 </body>

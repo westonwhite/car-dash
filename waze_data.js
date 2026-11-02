@@ -63,5 +63,7 @@ async function load(){
  if(!res||res.nf){try{const raw=await viaRaw();if(!res||raw.j)res=raw;}catch(e){if(!res)res={err:'unavailable'};}}
  if(res.j)try{return normalize(res.j)}catch(e){return {ok:false,why:'unreadable'};}
  return {ok:false,why:res.nf?'not published yet':(res.err||'unavailable')};}
-window.WAZE={load,normalize,ROUTES,source:RAW};
+/* clock helpers for the pages: ET time with/without seconds */
+const nowET=(sec)=>new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:sec?'2-digit':undefined,timeZone:TZ});
+window.WAZE={load,normalize,ROUTES,source:RAW,nowET};
 })();
