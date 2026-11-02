@@ -59,7 +59,7 @@ footer a{color:#7c8794}
 <body>
 <a href="hub.html" style="display:block;margin:10px;padding:26px;background:linear-gradient(135deg,#0e7490,#7c3aed);color:#fff;font-size:34px;font-weight:800;text-align:center;border-radius:14px;text-decoration:none;letter-spacing:1px">🛰️ Mission Control Hub</a>
 <a href="drive.html" style="display:block;margin:10px;padding:22px;background:#c62828;color:#fff;font-size:30px;font-weight:700;text-align:center;border-radius:14px;text-decoration:none">🚓 Drive View: TeslaNav + Radar</a>
-<a href="waze.html" style="display:block;margin:10px;padding:22px;background:#0b5f7a;color:#fff;font-size:30px;font-weight:700;text-align:center;border-radius:14px;text-decoration:none">🚙 Waze Live Map: US-19 / East Lake</a>
+<a href="waze.html" style="display:block;margin:10px;padding:22px;background:#0b5f7a;color:#fff;font-size:30px;font-weight:700;text-align:center;border-radius:14px;text-decoration:none">🚓 Cop &amp; Traffic Map: US-19 / East Lake</a>
 <header>
   <div><div id="clock">--:--</div><div id="date"></div></div>
   <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs weather loading…</div></div>
@@ -136,18 +136,23 @@ el.innerHTML=`<div class="t">${Math.round(c.temperature_2m)}°F</div><div class=
 }catch(e){el.innerHTML='<div class="t">—</div><div class="c">Weather unavailable</div>';}}
 wx();setInterval(wx,10*60*1000);
 
-/* fastest-route rows from the weekday Waze snapshot (waze_data.js); tap a row for the Cop Map */
-async function routes(){const el=document.getElementById('rp'),note=document.getElementById('rpnote'),asof=document.getElementById('rpasof');
-const d=await WAZE.load();rpChecked=WAZE.nowET(false);const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
-el.className=d.ok&&d.stale?'stale':'';
+/* fastest-route rows from the weekday Waze snapshot (waze_data.js); tap a row for the Cop & Traffic Map.
+   Minutes and cops show only weekdays 8:30–9:30 AM ET (waze_data.js blanks them outside the window). */
+async function routes(){const d=await WAZE.load();rpChecked=WAZE.nowET(false);return routesFrom(d);}
+function routesFrom(d){const el=document.getElementById('rp'),note=document.getElementById('rpnote'),asof=document.getElementById('rpasof');
+const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+rpLast=d;const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
+el.className=d.ok&&d.show?'':'stale';
 el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
 return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.hazards?(best?' · ':'')+'⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?WAZE.fmtMin(r.minutes)+'<small> min</small>':'—'}</span></a>`;}).join('');
 asof.textContent=[d.ok&&d.source?'via '+d.source:'',d.ok&&d.sample?'sample data':''].filter(Boolean).map(s=>'· '+s).join(' ');
-const up=document.getElementById('rpupd');up.textContent=d.ok?'Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:''):'Data updated —';up.classList.toggle('stale',!!(d.ok&&d.stale));
+const up=document.getElementById('rpupd');up.textContent=d.ok?'Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:''):'Data updated —';
 document.getElementById('rpchk').textContent='checked '+rpChecked;
-note.innerHTML=!d.ok?'Waze snapshot '+e(d.why)+'.':d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');return d;}
-let rpChecked='—',rpT=0;
+note.innerHTML=!d.ok?(WAZE.inWindow()?'Waze snapshot '+e(d.why)+'.':e(WAZE.offMsg())):!d.show?e(d.offMsg):(d.better?e(d.better):'');return d;}
+let rpChecked='—',rpT=0,rpLast=null;
+/* re-apply the ET window every 30 s from the last snapshot (no network): rows fill at 8:30 and blank at 9:30 / expires_et */
+function rpRender(){const d=rpLast;if(!d||!d.ok||!d.raw)return;const n=WAZE.normalize(d.raw);if(n.show!==d.show||!n.show)routesFrom(n);}
+setInterval(rpRender,30*1000);
 function rpClock(){document.getElementById('rpclk').innerHTML=WAZE.nowET(true)+'<small>ET</small>';}
 rpClock();setInterval(rpClock,1000);
 async function rpRefresh(){const b=document.getElementById('rpref'),st=document.getElementById('rpst');clearTimeout(rpT);

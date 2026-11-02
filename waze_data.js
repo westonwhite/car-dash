@@ -5,7 +5,11 @@
    minutes straight from the Google Maps Routes API (TRAFFIC_AWARE), possibly null; shown exactly as given, never
    padded (no buffer, no +delay_min, no rounding up, no typical-time fallback). Legacy delay_min is tolerated, not added.
    items:[{type,label,lat,lon,route,delay_min,speed_mph,line:[[lat,lon],..]}]} and older ones (updated ISO, or
-   updated_et + items only). Jam items may carry `line` (2-20 points) and no lat/lon. */
+   updated_et + items only). Jam items may carry `line` (2-20 points) and no lat/lon.
+   SHOW WINDOW: cops, jam lines and route minutes are shown only weekdays 8:30-9:30 AM America/New_York (checks run
+   8:50 and 9:00 AM ET), and only when the snapshot is today's in ET. If the JSON has expires_et, items hide after it.
+   Outside the window normalize() blanks items/jams/minutes/cops and sets show=false + offMsg. ET math uses Intl with
+   timeZone America/New_York, so the browser's own timezone never matters. */
 (function(){
 const TZ='America/New_York',GIST='474d9210d5355ce6de61eae535ba1bf8',FILE='waze_traffic.json';
 const API='https://api.github.com/gists/'+GIST,RAW='https://gist.githubusercontent.com/westonwhite/'+GIST+'/raw/'+FILE;
@@ -19,7 +23,37 @@ function niceDate(s){const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(s||'');if(!m)return 
 const num=v=>{const n=Number(v);return v==null||v===''||!isFinite(n)?null:n;};
 function normType(t){t=String(t||'').toLowerCase();if(/police|cop/.test(t))return 'police';if(/crash|accident/.test(t))return 'crash';
  if(/clos/.test(t))return 'closure';if(/construct|roadwork/.test(t))return 'construction';if(/jam|traffic/.test(t))return 'jam';return 'hazard';}
-function normalize(j){
+/* ---- ET show window ---- */
+const WIN_START=8*60+30,WIN_END=9*60+30,CHECKS=[8*60+50,9*60];
+const ETF=new Intl.DateTimeFormat('en-US',{timeZone:TZ,weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function etParts(d){const o={};for(const p of ETF.formatToParts(d))o[p.type]=p.value;
+ const h=(+o.hour)%24;return {ymd:o.year+'-'+o.month+'-'+o.day,y:+o.year,mo:+o.month,d:+o.day,h,mi:+o.minute,mins:h*60+(+o.minute),wd:o.weekday,weekday:!/^(Sat|Sun)/.test(o.weekday)};}
+/* ET wall clock -> real instant (DST-safe) */
+function etWall(y,mo,d,h,mi){let t=Date.UTC(y,mo-1,d,h,mi);for(let k=0;k<3;k++){const p=etParts(new Date(t));t-=Date.UTC(p.y,p.mo-1,p.d,p.h,p.mi)-Date.UTC(y,mo-1,d,h,mi);}return new Date(t);}
+/* expires_et: ISO with Z/offset; ISO without offset (= ET wall time); or a time only ("9:30 AM", "09:30") on the snapshot date */
+function parseExp(v,date){if(v==null||v==='')return null;const s=String(v).trim();let m;
+ if(/^\d{4}-\d\d-\d\dT.*(Z|[+-]\d\d:?\d\d)$/i.test(s)){const d=new Date(s);return isNaN(d)?null:d;}
+ if((m=/^(\d{4})-(\d\d)-(\d\d)[T ](\d\d?):(\d\d)/.exec(s)))return etWall(+m[1],+m[2],+m[3],+m[4],+m[5]);
+ if((m=/^(\d\d?):(\d\d)(?::\d\d)?\s*([AP]\.?M\.?)?/i.exec(s))&&date){let h=+m[1]%12;if(!m[3])h=+m[1];else if(/^p/i.test(m[3]))h+=12;
+  const q=/^(\d{4})-(\d\d)-(\d\d)$/.exec(date);return q?etWall(+q[1],+q[2],+q[3],h,+m[2]):null;}
+ const d=new Date(s);return isNaN(d)?null:d;}
+const fmtMins=m=>{const h=Math.floor(m/60),mi=m%60;return (h%12||12)+':'+String(mi).padStart(2,'0')+' '+(h<12?'AM':'PM');};
+function nextCheck(now){const p=etParts(now);
+ if(p.weekday)for(const c of CHECKS)if(p.mins<c)return fmtMins(c);
+ for(let k=1;k<=7;k++){const q=etParts(new Date(now.getTime()+k*864e5));if(q.weekday)return (k===1?'tomorrow ':q.wd+' ')+fmtMins(CHECKS[0]);}
+ return fmtMins(CHECKS[0]);}
+function inWindow(now){const p=etParts(now||new Date());return p.weekday&&p.mins>=WIN_START&&p.mins<WIN_END;}
+function gate(j,out,now){const p=etParts(now),exp=parseExp(j.expires_et,out.date);
+ const today=out.date===p.ymd;let show,why;
+ if(!today)why='not today';
+ else if(exp){show=p.weekday&&p.mins>=WIN_START&&now<exp;why=show?'':(now>=exp?'expired':'outside window');}
+ else{show=p.weekday&&p.mins>=WIN_START&&p.mins<WIN_END;why=show?'':'outside window';}
+ out.show=!!(today&&show);out.hideWhy=out.show?'':why;out.expires=exp;out.next=nextCheck(now);
+ out.offMsg='Cops & traffic show weekdays 8:30–9:30 AM · next check '+out.next;
+ if(!out.show){out.items=[];out.jams=[];out.best=null;
+  out.routes=out.routes.map(r=>Object.assign({},r,{minutes:null,cops:0,hazards:0,delay:null}));}
+ return out;}
+function normalize(j,now){now=now||new Date();
  const out={ok:true,raw:j,sample:!!j.sample,better:String(j.better_route||''),source:j.time_source?String(j.time_source).slice(0,40):'',items:[],jams:[],routes:[],best:null};
  let iso=j.updated?new Date(j.updated):null;if(iso&&isNaN(iso))iso=null;
  out.date=/^\d{4}-\d\d-\d\d$/.test(j.date||'')?j.date:(iso?ymd(iso):null);
@@ -47,7 +81,7 @@ function normalize(j){
   const m=re.exec(out.better);if(m&&!/^\s*alt/i.test(out.better.slice(m.index-4,m.index))&&(bi<0||m.index<bi)){bi=m.index;bk=r.key;}}
  if(bk&&lo){const n=out.routes.find(r=>r.key===bk);if(!n||n.minutes!==lo.minutes)bk=null;}
  if(!bk)bk=lo?lo.key:null;
- out.best=bk;return out;}
+ out.best=bk;return gate(j,out,now);}
 /* minutes exactly as published ("17", "17.5"); '—' for null */
 const fmtMin=m=>m==null?'—':String(m);
 const bust=u=>u+(u.includes('?')?'&':'?')+'t='+Date.now();
@@ -71,5 +105,5 @@ async function load(){
  return {ok:false,why:res.nf?'not published yet':(res.err||'unavailable')};}
 /* clock helpers for the pages: ET time with/without seconds */
 const nowET=(sec)=>new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:sec?'2-digit':undefined,timeZone:TZ});
-window.WAZE={load,normalize,ROUTES,source:RAW,nowET,fmtMin};
+window.WAZE={load,normalize,ROUTES,source:RAW,nowET,fmtMin,inWindow,nextCheck,etParts,offMsg:n=>'Cops & traffic show weekdays 8:30–9:30 AM · next check '+nextCheck(n||new Date())};
 })();
