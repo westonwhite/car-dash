@@ -49,6 +49,10 @@ header{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg
 .tick{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--p);height:34px;position:relative}
 .tick .tradingview-widget-container{position:absolute;left:0;top:-7px;width:132%;transform:scale(.76);transform-origin:0 0}
 .tick::after{content:'';position:absolute;inset:auto 0 0 0;height:3px;background:var(--p)}
+/* tap shield: the TradingView tape links each symbol to tradingview.com, which refuses to be framed
+   (frame-ancestors 'none'). Where a browser can't open a new tab (Tesla) the tap navigated the 34px iframe
+   itself and the strip went white until a refresh. The tape is display-only now. */
+.tick .tshield{position:absolute;inset:0;z-index:3;background:transparent;cursor:default;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #nbar{display:flex;align-items:stretch;height:32px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--p);min-width:0}
 #nbar .nlbl{flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--acc);background:var(--p2);border-right:1px solid var(--line);white-space:nowrap}
 #nbar .nlbl b{color:var(--bad);letter-spacing:0;font-size:12px}
@@ -233,7 +237,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 <div class="tick" id="stk"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
 <script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
 {"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq 100"},{"proName":"FOREXCOM:DJI","title":"Dow"},{"proName":"NASDAQ:TSLA","title":"TSLA"},{"proName":"NASDAQ:NVDA","title":"NVDA"},{"proName":"TVC:US10Y","title":"US 10Y"},{"proName":"TVC:USOIL","title":"Oil"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"}],"showSymbolLogo":true,"isTransparent":true,"displayMode":"compact","colorTheme":"dark","locale":"en"}
-</script></div></div>
+</script></div><div class="tshield" aria-hidden="true"></div></div>
 <div id="nbar"><span class="nlbl"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/></svg>Headlines<b id="nred"></b></span><div class="nvp"><div class="ntrack" id="ntrack"><span class="ni"><span class="ns">loading</span> Today&rsquo;s headlines…</span></div></div></div>
 <header>
   <div class="dot"></div>
@@ -462,7 +466,7 @@ if(mode==='weekend-am'&&atHome){head='At home · weekend';sub=`Crunch Countrysid
 btn.innerHTML=gym+`<a class="go" href="comanche.html"><span>Comanche</span><b style="font-size:13px">${KCLW&&KCLW.cat||'Wx'}</b></a>`+sendBtn('gym','Gym to<br>car');}
 else{const f=d&&d.fastest;
 head=f?`${fm(f.min)} ${dest==='work'?'to work':'home'}`:(ETA&&ETA.err?`${dest==='work'?'To work':'Home'} · live time unavailable`:wkey()?`${dest==='work'?'To work':'Home'} · checking traffic…`:`${dest==='work'?'To work':'Home'} · pair for live minutes`);
-sub=(f?(f.road?'fastest via '+f.road:'')+(f.delay_min?` · +${f.delay_min} min traffic`:'')+' · ':'')+(mode==='work'?'Morning run':mode==='weekend-am'?'Weekend':'Heading home')+(temp?' · '+temp:'')+rainTxt(dest==='work'?Math.max(hr??0,wr??0):hr);
+sub=(f?(f.road?'fastest via '+f.road:'')+(f.delay_min?` · incl. ${f.delay_min} min traffic`:'')+' · via Google Maps · ':'')+(mode==='work'?'Morning run':mode==='weekend-am'?'Weekend':'Heading home')+(temp?' · '+temp:'')+rainTxt(dest==='work'?Math.max(hr??0,wr??0):hr);
 btn.innerHTML=tabs()+gym+sendBtn(dest,(dest==='work'?'Work':'Home')+' to<br>car');}
 mn.textContent=head;msg.textContent=sub.replace(/^ · /,'');}
 
@@ -514,6 +518,17 @@ function closeReader(){document.getElementById('rdr').hidden=true;document.getEl
  addEventListener('DOMContentLoaded',()=>{document.getElementById('rclose').addEventListener('click',closeReader);
  document.getElementById('rdr').addEventListener('click',e=>{if(e.target.id==='rdr')closeReader();});});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader();});})();
+
+/* stock tape guard: if the TradingView iframe is ever navigated away from its widget page (a tap that
+   slipped past the shield, a widget redirect), put the widget back instead of leaving a white strip. */
+(function(){const box=document.getElementById('stk');let home=null;
+ function watch(f){if(f._tg)return;f._tg=1;f.setAttribute('tabindex','-1');let loads=0,fixing=0;
+  f.addEventListener('load',()=>{if(fixing){fixing--;return;}           // our own about:blank + reload
+   if(++loads===1){home=f.getAttribute('src');return;}                   // the widget's first load
+   if(home){fixing=2;loads=1;f.src='about:blank';setTimeout(()=>{f.src=home;},60);}});}  // in-frame navigation
+ const scan=()=>box.querySelectorAll('iframe').forEach(watch);
+ new MutationObserver(scan).observe(box,{childList:true,subtree:true});scan();
+ box.querySelector('.tshield').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});})();
 
 // ---- Market movers (plain HTML via Worker /movers; no iframe scrolling) ----
 let MV=null,mvK=localStorage.getItem('MV_TAB')||'gainers';

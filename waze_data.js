@@ -1,7 +1,9 @@
 /* waze_data.js: reads the weekday-morning Waze snapshot (waze_traffic.json) for waze.html, index.html and hub.html.
    Source: Weston's PUBLIC road-data gist (no setup on any browser). Tries the GitHub gist API first; when the API is
    rate-limited (60/hr per IP) or fails it falls back to the raw gist URL. Both fetches are cache-busted.
-   Accepts the current shape {updated_et,date,better_route,sample,routes:[{name,minutes,cops,hazards,delay_min}],
+   Accepts the current shape {updated_et,date,better_route,sample,time_source,routes:[{name,minutes,cops,hazards}],
+   minutes straight from the Google Maps Routes API (TRAFFIC_AWARE), possibly null; shown exactly as given, never
+   padded (no buffer, no +delay_min, no rounding up, no typical-time fallback). Legacy delay_min is tolerated, not added.
    items:[{type,label,lat,lon,route,delay_min,speed_mph,line:[[lat,lon],..]}]} and older ones (updated ISO, or
    updated_et + items only). Jam items may carry `line` (2-20 points) and no lat/lon. */
 (function(){
@@ -18,7 +20,7 @@ const num=v=>{const n=Number(v);return v==null||v===''||!isFinite(n)?null:n;};
 function normType(t){t=String(t||'').toLowerCase();if(/police|cop/.test(t))return 'police';if(/crash|accident/.test(t))return 'crash';
  if(/clos/.test(t))return 'closure';if(/construct|roadwork/.test(t))return 'construction';if(/jam|traffic/.test(t))return 'jam';return 'hazard';}
 function normalize(j){
- const out={ok:true,raw:j,sample:!!j.sample,better:String(j.better_route||''),items:[],jams:[],routes:[],best:null};
+ const out={ok:true,raw:j,sample:!!j.sample,better:String(j.better_route||''),source:j.time_source?String(j.time_source).slice(0,40):'',items:[],jams:[],routes:[],best:null};
  let iso=j.updated?new Date(j.updated):null;if(iso&&isNaN(iso))iso=null;
  out.date=/^\d{4}-\d\d-\d\d$/.test(j.date||'')?j.date:(iso?ymd(iso):null);
  out.asOf=j.updated_et?String(j.updated_et):(iso?hm(iso):null);
@@ -39,11 +41,15 @@ function normalize(j){
   for(const i of out.items){if(!i.route)continue;const r=byKey[i.route]||(byKey[i.route]={key:i.route,name:i.route,minutes:null,cops:0,hazards:0,delay:null});
    if(i.type==='police')r.cops++;else r.hazards++;}}
  out.routes=ROUTES.map(R=>Object.assign({label:R.label},byKey[R.key]||{key:R.key,name:R.key,minutes:null,cops:0,hazards:0,delay:null,missing:true}));
- /* fastest: route named first in better_route, else lowest minutes */
+ /* fastest: lowest non-null minutes; better_route wins only when consistent (its road ties the lowest time, or no road has a time) */
+ let lo=null;for(const r of out.routes)if(r.minutes!=null&&(!lo||r.minutes<lo.minutes))lo=r;
  let bi=-1,bk=null;for(const r of out.routes){const re=r.key==='US-19'?/\bUS[- ]?19\b(?!\s*alt)/i:r.key==='Belcher'?/belcher/i:/east\s*lake|mcmullen/i;
   const m=re.exec(out.better);if(m&&!/^\s*alt/i.test(out.better.slice(m.index-4,m.index))&&(bi<0||m.index<bi)){bi=m.index;bk=r.key;}}
- if(!bk){let best=null;for(const r of out.routes)if(r.minutes!=null&&(!best||r.minutes<best.minutes))best=r;bk=best?best.key:null;}
+ if(bk&&lo){const n=out.routes.find(r=>r.key===bk);if(!n||n.minutes!==lo.minutes)bk=null;}
+ if(!bk)bk=lo?lo.key:null;
  out.best=bk;return out;}
+/* minutes exactly as published ("17", "17.5"); '—' for null */
+const fmtMin=m=>m==null?'—':String(m);
 const bust=u=>u+(u.includes('?')?'&':'?')+'t='+Date.now();
 function apiWait(){try{return +localStorage.getItem(RLK)||0}catch(e){return 0}}
 async function viaApi(){
@@ -65,5 +71,5 @@ async function load(){
  return {ok:false,why:res.nf?'not published yet':(res.err||'unavailable')};}
 /* clock helpers for the pages: ET time with/without seconds */
 const nowET=(sec)=>new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:sec?'2-digit':undefined,timeZone:TZ});
-window.WAZE={load,normalize,ROUTES,source:RAW,nowET};
+window.WAZE={load,normalize,ROUTES,source:RAW,nowET,fmtMin};
 })();

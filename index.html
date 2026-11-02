@@ -142,8 +142,8 @@ const d=await WAZE.load();rpChecked=WAZE.nowET(false);const e=s=>String(s??'').r
 const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
 el.className=d.ok&&d.stale?'stale':'';
 el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
-return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.delay>0?(best?' · ':'')+'+'+r.delay+' min traffic':''}${r.hazards?' · ⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?r.minutes+'<small> min</small>':'—'}</span></a>`;}).join('');
-asof.textContent=d.ok&&d.sample?'· sample data':'';
+return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.hazards?(best?' · ':'')+'⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?WAZE.fmtMin(r.minutes)+'<small> min</small>':'—'}</span></a>`;}).join('');
+asof.textContent=[d.ok&&d.source?'via '+d.source:'',d.ok&&d.sample?'sample data':''].filter(Boolean).map(s=>'· '+s).join(' ');
 const up=document.getElementById('rpupd');up.textContent=d.ok?'Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:''):'Data updated —';up.classList.toggle('stale',!!(d.ok&&d.stale));
 document.getElementById('rpchk').textContent='checked '+rpChecked;
 note.innerHTML=!d.ok?'Waze snapshot '+e(d.why)+'.':d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');return d;}

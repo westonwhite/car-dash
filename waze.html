@@ -30,6 +30,7 @@ nav .seg{display:flex;gap:8px;flex:2 1 0;min-width:300px}
 #stamp .stale{background:#5d4037;border-color:#ffb74d;color:#ffe0b2}
 #stamp .smp{background:#4a148c;border-color:#ce93d8}
 #stamp .rt{font-weight:600}
+#stamp .via{font-size:15px;font-weight:600;color:var(--mut)}
 #stamp .clk{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:4px 16px}
 #stamp .clk small{font-size:18px;color:var(--mut);margin-left:6px}
 #stamp .mut{color:var(--mut);font-weight:600}
@@ -122,7 +123,8 @@ async function data(){const st=document.getElementById('chips'),up=document.getE
   let h='';
   if(d.stale)h+=`<span class="stale">Stale — from ${esc(d.dateNice)}</span>`;
   if(d.sample)h+=`<span class="smp">sample data</span>`;
-  for(const r of d.routes){if(r.missing)continue;h+=`<span class="rt ${d.best===r.key&&!d.stale?'best':''}">${esc(r.label)}${r.minutes!=null?' '+r.minutes+' min':''}${r.cops?' · 🚓'+r.cops:''}${r.hazards?' · ⚠️'+r.hazards:''}</span>`;}
+  if(d.source)h+=`<span class="via">via ${esc(d.source)}</span>`;
+  for(const r of d.routes){if(r.missing)continue;h+=`<span class="rt ${d.best===r.key&&!d.stale?'best':''}">${esc(r.label)}${' '+(r.minutes!=null?WAZE.fmtMin(r.minutes)+' min':'—')}${r.cops?' · 🚓'+r.cops:''}${r.hazards?' · ⚠️'+r.hazards:''}</span>`;}
   if(!d.items.length)h+='<span>No hazards reported</span>';else if(d.jams.length)h+=`<span>🐢 ${d.jams.length} jam${d.jams.length>1?'s':''}</span>`;
   st.innerHTML=h;
   cm.classList.toggle('stale-map',d.stale);
