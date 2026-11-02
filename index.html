@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Miracle Whip Dash</title>
+<script src="waze_data.js"></script>
 <meta name="robots" content="noindex">
 <style>
 :root{--bg:#0b0d10;--card:#161a20;--card2:#1d232b;--fg:#f2f4f7;--mut:#9aa4b2;--acc:#3ea6ff;--r:22px}
@@ -26,6 +27,20 @@ a.tile:active,a.tile:hover{background:var(--card2);border-color:var(--acc)}
 .soon{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 .soon div{background:#12161b;border:2px dashed #2a323d;border-radius:var(--r);padding:18px 22px;font-size:20px;color:var(--mut)}
 .soon b{color:var(--fg);display:block;font-size:24px;margin-bottom:6px}
+#rp{display:grid;gap:12px}
+#rp a.rt{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:18px;min-height:84px;padding:12px 24px;background:var(--card);border:3px solid transparent;border-radius:var(--r);color:var(--fg);text-decoration:none}
+#rp a.rt:active,#rp a.rt:hover{background:var(--card2);border-color:var(--acc)}
+#rp a.rt.best{border-color:#43a047;background:#132418}
+#rp .nm{font-size:32px;font-weight:700}
+#rp .nm small{display:block;font-size:18px;color:var(--mut);font-weight:500;margin-top:2px}
+#rp .cop{font-size:30px;font-weight:800;background:#1e3a8a;border:2px solid #60a5fa;border-radius:999px;padding:4px 16px;white-space:nowrap}
+#rp .cop.none{visibility:hidden}
+#rp .mn{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;min-width:150px;text-align:right}
+#rp .mn small{font-size:22px;color:var(--mut);font-weight:600}
+#rp.stale a.rt{opacity:.5;filter:grayscale(1)}
+#rp.stale a.rt.best{border-color:transparent;background:var(--card)}
+#rpnote{font-size:20px;color:var(--mut);margin:8px 4px 0}
+#rpnote b{color:#ffcc80}
 footer{margin-top:28px;color:#5d6673;font-size:16px}
 footer a{color:#7c8794}
 </style>
@@ -38,6 +53,10 @@ footer a{color:#7c8794}
   <div><div id="clock">--:--</div><div id="date"></div></div>
   <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs weather loading…</div></div>
 </header>
+
+<h2>🚦 Fastest route to work <span id="rpasof" style="text-transform:none;letter-spacing:0"></span></h2>
+<div id="rp"></div>
+<div id="rpnote"></div>
 
 <h2>✈️ Fly</h2>
 <div class="grid">
@@ -104,6 +123,17 @@ const g=c.wind_gusts_10m>c.wind_speed_10m+3?` G${Math.round(c.wind_gusts_10m)}`:
 el.innerHTML=`<div class="t">${Math.round(c.temperature_2m)}°F</div><div class="c">${W[c.weather_code]||'—'} · Wind ${dir} ${Math.round(c.wind_speed_10m)}${g} kt<br>Tarpon Springs</div>`;
 }catch(e){el.innerHTML='<div class="t">—</div><div class="c">Weather unavailable</div>';}}
 wx();setInterval(wx,10*60*1000);
+
+/* fastest-route rows from the weekday Waze snapshot (waze_data.js); tap a row for the Cop Map */
+async function routes(){const el=document.getElementById('rp'),note=document.getElementById('rpnote'),asof=document.getElementById('rpasof');
+const d=await WAZE.load();const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
+el.className=d.ok&&d.stale?'stale':'';
+el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
+return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.delay>0?(best?' · ':'')+'+'+r.delay+' min traffic':''}${r.hazards?' · ⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?r.minutes+'<small> min</small>':'—'}</span></a>`;}).join('');
+asof.textContent=d.ok?'· as of '+(d.asOf||'?')+(d.sample?' · sample data':''):'';
+note.innerHTML=!d.ok?(d.why==='unlinked'?'Waze snapshot not linked on this browser.':'Waze snapshot '+e(d.why)+'.'):d.stale?`<b>Stale — from ${e(d.dateNice)}.</b> Refreshed weekday mornings ~9 AM.`:(d.better?e(d.better):'');}
+routes();setInterval(()=>{if(!document.hidden)routes();},5*60*1000);
 </script>
 </body>
 </html>

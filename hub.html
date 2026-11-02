@@ -37,6 +37,7 @@ header{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg
 #kmsg{color:var(--mut);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #kbtn{display:flex;gap:6px;flex:none;min-width:0}
 .go{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:92px;height:54px;padding:0 12px;border-radius:12px;background:#151f2c;border:1px solid #2a3c52;color:var(--fg);text-decoration:none;font:600 15px/1.1 inherit;font-family:inherit;white-space:nowrap;cursor:pointer}
+.copb{display:inline-block;vertical-align:middle;margin-left:6px;font-style:normal;font-size:13px;font-weight:800;line-height:1;padding:3px 6px;border-radius:999px;background:#1e3a8a;border:1px solid #60a5fa;color:#fff;pointer-events:none}.copb.st{filter:grayscale(1);opacity:.5}
 .go b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
 .go span{font-size:13px;color:#c9d6e3}
 .go:active,.go:hover{border-color:var(--mag);box-shadow:0 0 12px rgba(232,121,249,.35)}
@@ -285,6 +286,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#071018}
 </div>
 </div>
 
+<script src="waze_data.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const tz='America/New_York';
@@ -443,13 +445,17 @@ clearTimeout(b._t);b.classList.remove('arm');b.innerHTML='Sending…';
 try{const r=await wfetch('/nav',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dest})});const j=await r.json().catch(()=>({}));b.innerHTML=r.ok&&j.ok?'Sent ✓':'Failed';setTimeout(navPoll,8000);}
 catch(e){b.innerHTML='Failed';}setTimeout(()=>{b.innerHTML=b.dataset.lbl;},4000);}
 const sendBtn=(dest,lbl)=>wkey()?`<button class="go send" data-lbl="${lbl}" onclick="sendCar('${dest}',this)">${lbl}</button>`:'';
+/* 🚓 badge per road from the weekday Waze snapshot (waze_data.js); display only, greyed when not today's */
+let WZD=null;const WZK={'Belcher':'Belcher','US-19':'US-19','East Lake':'East Lake / McMullen Booth'};
+function copB(k){const r=WZD&&WZD.ok&&WZD.routes.find(x=>x.key===WZK[k]);return r&&r.cops>0?`<i class="copb${WZD.stale?' st':''}" title="${r.cops} police reported${WZD.asOf?' as of '+esc(WZD.asOf):''}${WZD.stale?' (stale)':''}">🚓${r.cops}</i>`:'';}
+async function wzLoad(){if(!window.WAZE)return;WZD=await WAZE.load();kbyg();}
 function kbyg(){const mode=kMode(),dest=kDest();const msg=document.getElementById('kmsg'),mn=document.getElementById('kmin'),btn=document.getElementById('kbtn');
 const hr=rain(WX&&WX.home),wr=rain(WX&&WX.work);
 const rainTxt=p=>p==null?'':p>=50?` · rain ${p}% next 3h`:p>=25?` · ${p}% rain chance`:' · dry next 3h';
 const d=ETA&&ETA.dest===dest&&ETA.data?ETA.data:null;const addr=ADDR[dest];
 const temp=WX?Math.round((dest==='work'?WX.work:WX.home).current.temperature_2m)+'° '+(dest==='work'?'at work':'in Tarpon'):'';
 const atHome=d&&d.fastest&&d.fastest.min<=3;
-const tabs=()=>Object.keys(VIA).map(k=>{const r=d&&d.routes&&d.routes[k];return `<a class="go ${d&&d.best===k?'hi':''}" href="${gm(addr,VIA[k])}" title="${esc(addr)} via ${k}"><span>${k}</span><b>${r?fm(r.min):'—'}</b></a>`;}).join('');
+const tabs=()=>Object.keys(VIA).map(k=>{const r=d&&d.routes&&d.routes[k];return `<a class="go ${d&&d.best===k?'hi':''}" href="${gm(addr,VIA[k])}" title="${esc(addr)} via ${k}"><span>${k}</span><b>${r?fm(r.min):'—'}${copB(k)}</b></a>`;}).join('');
 const gym=`<a class="go ${mode==='weekend-am'&&atHome?'hi':''}" href="${gm(GYM_ADDR)}"><span>Crunch</span><b style="font-size:13px">Gym</b></a>`;
 let head,sub;
 if(mode==='weekend-am'&&atHome){head='At home · weekend';sub=`Crunch Countryside or the Comanche? KCLW ${KCLW&&KCLW.cat||'…'}${rainTxt(hr)}`;
@@ -521,7 +527,7 @@ async function movers(){try{const r=await fetch(wbase()+'/movers',{cache:'no-sto
  mvRender();}
 document.getElementById('mvtabs').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b)return;mvK=b.dataset.k;localStorage.setItem('MV_TAB',mvK);mvRender();});
 let lastDest=kDest();
-wx();avx();fleet();news();headlines();movers();kbyg();loadEta();navPoll();
+wx();avx();fleet();news();headlines();movers();kbyg();loadEta();navPoll();wzLoad();setInterval(()=>{if(!document.hidden)wzLoad();},5*60*1000);
 setInterval(wx,10*60e3);setInterval(avx,10*60e3);setInterval(news,15*60e3);setInterval(()=>{if(!document.hidden)headlines();},5*60e3);setInterval(()=>{if(!document.hidden)movers();},3*60e3);
 setInterval(()=>{if(!document.hidden)fleet();},2*60e3);
 setInterval(navPoll,30e3);
