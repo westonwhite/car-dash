@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cop &amp; Traffic Map · Car Dash</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="waze_data.js"></script>
 <style>
 :root{--bg:#0b0d10;--card:#161a20;--card2:#1d232b;--fg:#f2f4f7;--mut:#9aa4b2;--acc:#3ea6ff;--waze:#33ccff}
 *{box-sizing:border-box}
@@ -17,131 +15,45 @@ nav a,nav button{flex:1 1 0;min-width:120px;min-height:68px;display:flex;align-i
 nav a:active,nav button:active,nav a:hover,nav button:hover{background:var(--card2);border-color:var(--acc)}
 nav .back{background:#c62828;border-color:#c62828;color:#fff;flex:0.8 1 0}
 nav .open{background:#0b5f7a;border-color:var(--waze);color:#fff}
-nav .ttl{flex:1.6 1 0;min-width:260px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:clamp(20px,1.8vw,26px);white-space:nowrap;background:#12161b;border-radius:14px;padding:0 12px}
-#zl{flex:0 0 auto;min-width:96px;min-height:68px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--mut);background:#12161b;border-radius:14px;padding:0 10px}
-#mapwrap{position:relative;flex:1 1 auto;min-height:0;border-radius:14px;overflow:hidden;background:#111}
-#copmap{position:absolute;inset:0;width:100%;height:100%;border:0}
-.hide{display:none!important}
-#copmap{background:#1b1f24}
-#stamp{position:absolute;z-index:500;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
-#stamp span{background:rgba(11,13,16,.88);border:2px solid #2a323d;border-radius:12px;padding:8px 14px;font-size:22px;font-weight:700}
-#stamp .stale{background:#5d4037;border-color:#ffb74d;color:#ffe0b2}
-#stamp .smp{background:#4a148c;border-color:#ce93d8}
-#stamp .rt{font-weight:600}
-#stamp .via{font-size:15px;font-weight:600;color:var(--mut)}
-#stamp .clk{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:4px 16px}
-#stamp .clk small{font-size:18px;color:var(--mut);margin-left:6px}
-#stamp .mut{color:var(--mut);font-weight:600}
-#stamp .ok{border-color:#66bb6a;color:#a5d6a7}#stamp .err{border-color:#e57373;color:#ffcdd2}#stamp .busy{border-color:#64b5f6;color:#bbdefb}
-#stamp #rst:empty{display:none}
-#chips{display:contents}
-nav .ref{background:#1565c0;border-color:#64b5f6;color:#fff;min-height:68px}
+nav .ref{background:#1565c0;border-color:#64b5f6;color:#fff}
 nav .ref:disabled{opacity:.6}
-#stamp .rt.best{border-color:#66bb6a}
-#legend{position:absolute;z-index:500;bottom:22px;left:10px;background:rgba(11,13,16,.88);border:2px solid #2a323d;border-radius:12px;padding:8px 12px;font-size:19px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
-#legend .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-#legend i{display:inline-block;width:34px;height:8px;border-radius:4px;margin-right:6px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
-.wzi{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;font-size:30px;line-height:1;background:#fff;border:3px solid #111;box-shadow:0 2px 8px rgba(0,0,0,.6)}
-.wzi.police{background:#1e88e5;border-color:#fff;width:56px;height:56px;font-size:36px}
-.wzi.crash{background:#e53935;border-color:#fff}
-.wzi.closure{background:#b71c1c;border-color:#fff}
-.wzi.construction{background:#fb8c00;border-color:#fff}
-.wzi.hazard{background:#fdd835;border-color:#333}
-.wzi.jam{background:#8e24aa;border-color:#fff}
-#off{position:absolute;z-index:500;bottom:22px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);background:rgba(11,13,16,.9);border:2px solid #2a323d;border-radius:12px;padding:8px 16px;font-size:20px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-.leaflet-container{font:inherit}
-.leaflet-popup-content{font-size:20px}
+nav .ttl{flex:1.4 1 0;min-width:240px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:clamp(20px,1.8vw,26px);white-space:nowrap;background:#12161b;border-radius:14px;padding:0 12px}
+nav .clk{flex:0 0 auto;min-width:200px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;background:#12161b;border:2px solid #2a323d;border-radius:14px;padding:0 14px}
+nav .clk small{font-size:18px;color:var(--mut);margin-left:6px}
+#st{flex:0 0 auto;display:flex;align-items:center;font-size:18px;font-weight:700;color:var(--mut);padding:0 4px}
+#st.ok{color:#a5d6a7}#st.busy{color:#bbdefb}
+#mapwrap{position:relative;flex:1 1 auto;min-height:0;border-radius:14px;overflow:hidden;background:#111}
+#map{position:absolute;inset:0;width:100%;height:100%;border:0;background:#111}
 </style>
 </head>
 <body>
 <nav>
   <a class="back" href="./">⬅ Dash</a>
   <div class="ttl">🚓 Cops &amp; Traffic</div>
+  <span class="clk" id="clk">--:--<small>ET</small></span>
+  <span id="st">loaded —</span>
   <button id="refresh" class="ref" type="button">🔄 Refresh</button>
-  <button id="recenter" type="button">🎯 Recenter</button>
-  <button id="zin" type="button">➕ Zoom In</button>
-  <button id="zout" type="button">➖ Zoom Out</button>
-  <div id="zl">Zoom 12</div>
+  <a class="open" href="https://teslanav.com/" target="_top" rel="noopener">🚙 Open TeslaNav</a>
 </nav>
 <div id="mapwrap">
-  <div id="copmap"></div>
-  <div id="stamp"><span class="clk" id="clk">--:--<small>ET</small></span><span id="upd">Loading…</span><span class="mut" id="chk">checked —</span><span id="rst"></span><span id="chips"></span></div>
-  <div id="legend"><div class="row"><span><i style="background:#ffd600"></i>Slow</span><span><i style="background:#ff8f00"></i>Heavy</span><span><i style="background:#e53935"></i>Very heavy</span><span><i style="background:#7f0000"></i>Standstill</span></div><div class="row">🚓 Police · 💥 Crash · ⛔ Closure · 🚧 Work · ⚠️ Hazard · 🐢 Jam</div></div>
-  <div id="off" class="hide"></div>
+  <iframe id="map" title="TeslaNav live map: Waze cops &amp; traffic" allow="geolocation; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// One map: Leaflet + OSM tiles with the weekday Waze snapshot (waze_data.js): cops/hazard icons on top of
-// Waze jam segments drawn as colored lines (yellow slow -> dark red standstill).
-// Cops, jams and route minutes show only weekdays 8:30–9:30 AM ET (checks 8:50 + 9:00 AM ET, or until expires_et);
-// outside that the map is clean with one small line. All times are America/New_York regardless of the browser's zone.
-// Old links (?v=live from the retired Live Waze view) land here on the same single map.
-const LAT=28.07, LON=-82.73, DEF=12;
-(()=>{const u=new URL(location.href);if(u.searchParams.has('v')||u.searchParams.has('z')){u.searchParams.delete('v');u.searchParams.delete('z');history.replaceState(null,'',u);}})();
-const cm=document.getElementById('copmap');
-const ICON={police:'🚓',crash:'💥',closure:'⛔',construction:'🚧',hazard:'⚠️',jam:'🐢'};
-const NAME={police:'Police',crash:'Crash',closure:'Closure',construction:'Roadwork',hazard:'Hazard',jam:'Jam'};
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let map=null,layer=null,jl=null,last=null,lastShow=null;
-/* jam severity 0..3 from speed_mph and/or delay_min (worst wins) */
-const SEV=[{c:'#ffd600',n:'Slow'},{c:'#ff8f00',n:'Heavy'},{c:'#e53935',n:'Very heavy'},{c:'#7f0000',n:'Standstill'}];
-function sev(j){let s=-1;
-  if(j.speed!=null)s=Math.max(s,j.speed<5?3:j.speed<15?2:j.speed<25?1:0);
-  if(j.delay!=null)s=Math.max(s,j.delay>10?3:j.delay>=6?2:j.delay>=3?1:0);
-  return s<0?1:s;}
-function initMap(){if(map||!window.L)return;
-  map=L.map(cm,{zoomControl:false,attributionControl:true,zoomSnap:1}).setView([LAT,LON],DEF);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,subdomains:'abc',attribution:'© OpenStreetMap · Waze snapshot'}).addTo(map);
-  jl=L.layerGroup().addTo(map);layer=L.layerGroup().addTo(map);map.on('zoomend',zlbl);}
-function zlbl(){document.getElementById('zl').textContent='Zoom '+(map?map.getZoom():DEF);}
-document.getElementById('recenter').onclick=()=>{if(map)map.setView([LAT,LON],DEF);zlbl();};
-document.getElementById('zin').onclick=()=>{if(map)map.zoomIn();zlbl();};
-document.getElementById('zout').onclick=()=>{if(map)map.zoomOut();zlbl();};
-const off=document.getElementById('off'),leg=document.getElementById('legend');
-function render(d){const st=document.getElementById('chips'),up=document.getElementById('upd');
-  if(layer)layer.clearLayers();if(jl)jl.clearLayers();
-  if(!d||!d.ok){up.textContent=d?'Waze snapshot '+d.why:'Loading…';up.className=d?'err':'';st.innerHTML='';
-    leg.classList.add('hide');off.textContent=WAZE.offMsg();off.classList.toggle('hide',WAZE.inWindow());lastShow=false;return;}
-  lastShow=d.show;
-  up.textContent='Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:' today');up.className='';
-  leg.classList.toggle('hide',!d.show);off.classList.toggle('hide',d.show);off.textContent=d.offMsg;
-  if(!d.show){st.innerHTML='';return;}
-  let h='';
-  if(d.sample)h+=`<span class="smp">sample data</span>`;
-  if(d.source)h+=`<span class="via">via ${esc(d.source)}</span>`;
-  for(const r of d.routes){if(r.missing)continue;h+=`<span class="rt ${d.best===r.key?'best':''}">${esc(r.label)}${' '+(r.minutes!=null?WAZE.fmtMin(r.minutes)+' min':'—')}${r.cops?' · 🚓'+r.cops:''}${r.hazards?' · ⚠️'+r.hazards:''}</span>`;}
-  if(!d.items.length)h+='<span>No hazards reported</span>';else if(d.jams.length)h+=`<span>🐢 ${d.jams.length} jam${d.jams.length>1?'s':''}</span>`;
-  st.innerHTML=h;
-  if(!layer)return;
-  /* jam lines: dark casing + 7px color, a wide invisible hit line for easy taps; drawn in the overlay pane (below icons) */
-  [...d.jams].sort((a,b)=>sev(a)-sev(b)).forEach(j=>{const v=sev(j),S=SEV[v];
-    const pop=`<b>🐢 ${S.n} traffic</b>${j.route?'<br>'+esc(j.route):''}${j.label?'<br>'+esc(j.label):''}${j.delay!=null?'<br>+'+j.delay+' min delay':''}${j.speed!=null?'<br>~'+j.speed+' mph':''}`;
-    L.polyline(j.line,{color:'#000',weight:11,opacity:.55,lineCap:'round',lineJoin:'round',interactive:false,className:'jamln'}).addTo(jl);
-    L.polyline(j.line,{color:S.c,weight:7,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false,className:'jamln'}).addTo(jl);
-    L.polyline(j.line,{color:'#000',weight:26,opacity:0}).bindPopup(pop).addTo(jl);});
-  const order=['jam','hazard','construction','closure','crash','police'];   // police on top
-  [...d.items].filter(it=>!it.line).sort((a,b)=>order.indexOf(a.type)-order.indexOf(b.type)).forEach(it=>{
-    const big=it.type==='police',sz=big?56:48;
-    L.marker([it.lat,it.lon],{icon:L.divIcon({className:'',html:`<div class="wzi ${it.type}">${ICON[it.type]}</div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:big?1000:0})
-     .bindPopup(`<b>${ICON[it.type]} ${NAME[it.type]}</b><br>${esc(it.label)}${it.route?'<br>'+esc(it.route):''}${it.delay>0?'<br>+'+it.delay+' min':''}`).addTo(layer);});}
-async function data(){const d=await WAZE.load();last=d;
-  document.getElementById('chk').textContent='checked '+WAZE.nowET(false);render(d);return d;}
-/* re-apply the ET window every 30 s from the last snapshot (no network) so items appear at 8:30 / vanish at 9:30 or expires_et */
-function regate(){if(last&&last.ok&&last.raw){const d=WAZE.normalize(last.raw);if(d.show!==lastShow||!d.show)render(d);}
-  else render(last);}
-render(null);
-function boot(){initMap();zlbl();data();}
-if(window.L)boot();else window.addEventListener('load',boot);
-setInterval(()=>{if(!document.hidden)data();},5*60*1000);   // auto re-fetch every 5 min
-setInterval(regate,30*1000);
-function tick(){document.getElementById('clk').innerHTML=WAZE.nowET(true)+'<small>ET</small>';}
-tick();setInterval(tick,1000);
+// One live map: the free TeslaNav website (teslanav.com: moving map with Waze police and traffic), framed full-size.
+// Always on (no time window), no paid API and no gist data on this page. TeslaNav centers on the car via
+// geolocation (it has no lat/lon URL parameters). Refresh reloads the iframe. Old ?v=live links land here too.
+const SRC='https://teslanav.com/';
+const TZ='America/New_York';
+(()=>{const u=new URL(location.href);if(u.search){u.search='';history.replaceState(null,'',u);}})();
+const f=document.getElementById('map'),st=document.getElementById('st');
+const now=sec=>new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:sec?'2-digit':undefined,timeZone:TZ});
+function load(){st.className='busy';st.textContent='Loading…';f.src=SRC+'?_='+Date.now();}
+f.addEventListener('load',()=>{if(!f.src)return;st.className='ok';st.textContent='loaded '+now(false);});
 let rT=0;
-document.getElementById('refresh').onclick=async()=>{const b=document.getElementById('refresh'),r=document.getElementById('rst');clearTimeout(rT);
-  b.disabled=true;r.className='busy';r.textContent='Refreshing…';let d;
-  try{d=await data();}catch(x){d={ok:false,why:'failed'};}
-  b.disabled=false;r.className=d&&d.ok?'ok':'err';r.textContent=d&&d.ok?'✓ Up to date':'⚠️ '+((d&&d.why)||'failed');
-  rT=setTimeout(()=>{r.textContent='';r.className='';},6000);};
+document.getElementById('refresh').onclick=()=>{clearTimeout(rT);const b=document.getElementById('refresh');b.disabled=true;load();rT=setTimeout(()=>{b.disabled=false;},1500);};
+function tick(){document.getElementById('clk').innerHTML=now(true)+'<small>ET</small>';}
+tick();setInterval(tick,1000);
+load();
 </script>
 </body>
 </html>

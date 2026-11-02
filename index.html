@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Miracle Whip Dash</title>
-<script src="waze_data.js"></script>
 <meta name="robots" content="noindex">
 <style>
 :root{--bg:#0b0d10;--card:#161a20;--card2:#1d232b;--fg:#f2f4f7;--mut:#9aa4b2;--acc:#3ea6ff;--r:22px}
@@ -27,31 +26,6 @@ a.tile:active,a.tile:hover{background:var(--card2);border-color:var(--acc)}
 .soon{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 .soon div{background:#12161b;border:2px dashed #2a323d;border-radius:var(--r);padding:18px 22px;font-size:20px;color:var(--mut)}
 .soon b{color:var(--fg);display:block;font-size:24px;margin-bottom:6px}
-#rp{display:grid;gap:12px}
-#rp a.rt{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:18px;min-height:84px;padding:12px 24px;background:var(--card);border:3px solid transparent;border-radius:var(--r);color:var(--fg);text-decoration:none}
-#rp a.rt:active,#rp a.rt:hover{background:var(--card2);border-color:var(--acc)}
-#rp a.rt.best{border-color:#43a047;background:#132418}
-#rp .nm{font-size:32px;font-weight:700}
-#rp .nm small{display:block;font-size:18px;color:var(--mut);font-weight:500;margin-top:2px}
-#rp .cop{font-size:30px;font-weight:800;background:#1e3a8a;border:2px solid #60a5fa;border-radius:999px;padding:4px 16px;white-space:nowrap}
-#rp .cop.none{visibility:hidden}
-#rp .mn{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;min-width:150px;text-align:right}
-#rp .mn small{font-size:22px;color:var(--mut);font-weight:600}
-#rp.stale a.rt{opacity:.5;filter:grayscale(1)}
-#rp.stale a.rt.best{border-color:transparent;background:var(--card)}
-#rpnote{font-size:20px;color:var(--mut);margin:8px 4px 0}
-#rpbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
-#rpbar .clk{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;background:var(--card);border:2px solid #2a323d;border-radius:14px;padding:6px 18px;line-height:1.1}
-#rpbar .clk small{font-size:20px;color:var(--mut);font-weight:600;margin-left:6px}
-#rpbar .chip{font-size:22px;font-weight:700;background:var(--card);border:2px solid #2a323d;border-radius:14px;padding:10px 16px}
-#rpbar .chip.mut{color:var(--mut);font-weight:600}
-#rpbar .chip.stale{background:#5d4037;border-color:#ffb74d;color:#ffe0b2}
-#rpst{font-size:22px;font-weight:700;padding:10px 6px}
-#rpst.ok{color:#81c784}#rpst.err{color:#ef9a9a}#rpst.busy{color:#90caf9}
-#rpref{margin-left:auto;min-height:72px;min-width:200px;font-size:28px;font-weight:800;font-family:inherit;color:#fff;background:#1565c0;border:3px solid #64b5f6;border-radius:16px;padding:8px 22px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#rpref:active,#rpref:hover{background:#1e88e5}
-#rpref:disabled{opacity:.6}
-#rpnote b{color:#ffcc80}
 footer{margin-top:28px;color:#5d6673;font-size:16px}
 footer a{color:#7c8794}
 </style>
@@ -64,11 +38,6 @@ footer a{color:#7c8794}
   <div><div id="clock">--:--</div><div id="date"></div></div>
   <div id="wx"><div class="t">--°</div><div class="c">Tarpon Springs weather loading…</div></div>
 </header>
-
-<h2>🚦 Fastest route to work <span id="rpasof" style="text-transform:none;letter-spacing:0"></span></h2>
-<div id="rpbar"><span class="clk" id="rpclk">--:--<small>ET</small></span><span class="chip" id="rpupd">Data updated —</span><span class="chip mut" id="rpchk">checked —</span><span id="rpst"></span><button id="rpref" type="button">🔄 Refresh</button></div>
-<div id="rp"></div>
-<div id="rpnote"></div>
 
 <h2>✈️ Fly</h2>
 <div class="grid">
@@ -136,32 +105,6 @@ el.innerHTML=`<div class="t">${Math.round(c.temperature_2m)}°F</div><div class=
 }catch(e){el.innerHTML='<div class="t">—</div><div class="c">Weather unavailable</div>';}}
 wx();setInterval(wx,10*60*1000);
 
-/* fastest-route rows from the weekday Waze snapshot (waze_data.js); tap a row for the Cop & Traffic Map.
-   Minutes and cops show only weekdays 8:30–9:30 AM ET (waze_data.js blanks them outside the window). */
-async function routes(){const d=await WAZE.load();rpChecked=WAZE.nowET(false);return routesFrom(d);}
-function routesFrom(d){const el=document.getElementById('rp'),note=document.getElementById('rpnote'),asof=document.getElementById('rpasof');
-const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-rpLast=d;const rows=d.ok?d.routes:WAZE.ROUTES.map(r=>({key:r.key,label:r.label,minutes:null,cops:0,missing:true}));
-el.className=d.ok&&d.show?'':'stale';
-el.innerHTML=rows.map(r=>{const best=d.ok&&d.best===r.key;
-return `<a class="rt${best?' best':''}" href="waze.html"><span class="nm">${best?'⭐ ':''}${e(r.label)}<small>${best?'Fastest':''}${r.hazards?(best?' · ':'')+'⚠️ '+r.hazards+' hazard'+(r.hazards>1?'s':''):''}</small></span><span class="cop${r.cops>0?'':' none'}">🚓 ${r.cops||0}</span><span class="mn">${r.minutes!=null?WAZE.fmtMin(r.minutes)+'<small> min</small>':'—'}</span></a>`;}).join('');
-asof.textContent=[d.ok&&d.source?'via '+d.source:'',d.ok&&d.sample?'sample data':''].filter(Boolean).map(s=>'· '+s).join(' ');
-const up=document.getElementById('rpupd');up.textContent=d.ok?'Data updated '+(d.asOf||'?')+(d.stale?' · '+d.dateNice:''):'Data updated —';
-document.getElementById('rpchk').textContent='checked '+rpChecked;
-note.innerHTML=!d.ok?(WAZE.inWindow()?'Waze snapshot '+e(d.why)+'.':e(WAZE.offMsg())):!d.show?e(d.offMsg):(d.better?e(d.better):'');return d;}
-let rpChecked='—',rpT=0,rpLast=null;
-/* re-apply the ET window every 30 s from the last snapshot (no network): rows fill at 8:30 and blank at 9:30 / expires_et */
-function rpRender(){const d=rpLast;if(!d||!d.ok||!d.raw)return;const n=WAZE.normalize(d.raw);if(n.show!==d.show||!n.show)routesFrom(n);}
-setInterval(rpRender,30*1000);
-function rpClock(){document.getElementById('rpclk').innerHTML=WAZE.nowET(true)+'<small>ET</small>';}
-rpClock();setInterval(rpClock,1000);
-async function rpRefresh(){const b=document.getElementById('rpref'),st=document.getElementById('rpst');clearTimeout(rpT);
- b.disabled=true;st.className='busy';st.textContent='Refreshing…';let d;
- try{d=await routes();}catch(x){d={ok:false,why:'failed'};}
- b.disabled=false;st.className=d&&d.ok?'ok':'err';st.textContent=d&&d.ok?'✓ Up to date':'⚠️ '+((d&&d.why)||'failed');
- rpT=setTimeout(()=>{st.textContent='';st.className='';},6000);}
-document.getElementById('rpref').onclick=rpRefresh;
-routes();setInterval(()=>{if(!document.hidden)routes();},5*60*1000);
 </script>
 </body>
 </html>
