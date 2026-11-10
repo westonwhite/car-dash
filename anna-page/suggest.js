@@ -196,6 +196,7 @@
     return false;
   }
   function statusOf(issue, reply) {
+    if (issue && issue.queued) return {text: "Queued", cls: "wait"};
     if (hasLabel(issue, "memo-to-anna")) return {text: "Memo to Anna", cls: "done"};
     if (hasLabel(issue, "memo-to-weston")) return {text: "Memo to Weston", cls: "done"};
     var navDone = hasLabel(issue, "nav-request") && (issue.state === "closed" || reply || issue.comments > 0);
@@ -216,6 +217,20 @@
       if (n && want[n] && !found[n]) found[n] = c;
     }
     return found;
+  }
+  function dropSeen(pending, issues) {
+    var seen = {};
+    var i, body, m;
+    for (i = 0; i < (issues || []).length; i++) {
+      body = String((issues[i] && issues[i].body) || "");
+      m = body.match(/Queue-Id:\s*([0-9]+-[0-9]+)/);
+      if (m) seen[m[1]] = 1;
+    }
+    var out = [];
+    for (i = 0; i < (pending || []).length; i++) {
+      if (pending[i] && !seen[String(pending[i].id)]) out.push(pending[i]);
+    }
+    return out;
   }
   function shapeMemos(list) {
     var items = (list || []).slice().sort(function (a, b) {
@@ -245,7 +260,7 @@
       root.clearTimeout(timer);
       var data = null;
       try { data = JSON.parse(raw); } catch (e) {}
-      if (data && data.ok) cb({ok: true, number: data.number});
+      if (data && data.ok) cb({ok: true, queued: data.queued === true, id: data.id || "", number: data.number || null});
       else cb({ok: false, error: data && data.error ? String(data.error) : "Refused"});
     }).catch(function () {
       if (done) return;
@@ -265,6 +280,22 @@
       return r.json();
     }).then(function (data) { if (data) cb(data); }).catch(function () { cb(null); });
   }
+  function findByQueueId(id, cb) {
+    var cfg = config();
+    var marker = "Queue-Id: " + id;
+    root.fetch("https://api.github.com/repos/" + cfg.repo + "/issues?state=all&per_page=20&sort=created&direction=desc", {
+      headers: {Accept: "application/vnd.github+json"}
+    }).then(function (r) {
+      return r.status === 200 ? r.json() : [];
+    }).then(function (data) {
+      var i;
+      if (!data || !data.slice) { cb(null); return; }
+      for (i = 0; i < data.length; i++) {
+        if (String(data[i].body || "").indexOf(marker) >= 0) { cb(data[i]); return; }
+      }
+      cb(null);
+    }).catch(function () { cb(null); });
+  }
 
   root.DashAsk = {
     MAX: MAX,
@@ -277,10 +308,12 @@
     statusOf: statusOf,
     latestReplies: latestReplies,
     shapeMemos: shapeMemos,
+    dropSeen: dropSeen,
     hasLabel: hasLabel,
     meta: meta,
     postRequest: postRequest,
-    readIssue: readIssue
+    readIssue: readIssue,
+    findByQueueId: findByQueueId
   };
 
   if (typeof document === "undefined") return;
@@ -446,6 +479,40 @@
     if (text != null) n.textContent = text;
     return n;
   }
+  function pendingKey() { return "dash_ask_pending_" + requester; }
+  function loadPending() {
+    try {
+      var raw = root.localStorage && root.localStorage.getItem(pendingKey());
+      var list = JSON.parse(raw || "[]");
+      return list && list.slice ? list : [];
+    } catch (e) { return []; }
+  }
+  function savePending(list) {
+    try { if (root.localStorage) root.localStorage.setItem(pendingKey(), JSON.stringify(list.slice(0, 20))); } catch (e) {}
+  }
+  function rememberPending(id, built) {
+    var list = loadPending();
+    list.unshift({id: String(id), title: built.title || "Request", labels: built.labels || [], at: new Date().toISOString()});
+    savePending(list);
+  }
+  function withPending(issues) {
+    var pending = dropSeen(loadPending(), issues);
+    savePending(pending);
+    var rows = [];
+    var i;
+    for (i = 0; i < pending.length; i++) {
+      rows.push({
+        number: "q-" + pending[i].id,
+        title: pending[i].title,
+        labels: pending[i].labels || [],
+        body: "",
+        queued: true,
+        comments: 0,
+        state: "open"
+      });
+    }
+    return rows.concat(issues || []);
+  }
   function renderList(state) {
     var box = el("askItems");
     while (box.firstChild) box.removeChild(box.firstChild);
@@ -457,7 +524,7 @@
       box.appendChild(node("p", "ask-note", state.error));
       return;
     }
-    var issues = state.issues || [];
+    var issues = withPending(state.issues || []);
     if (!issues.length) {
       box.appendChild(node("p", "ask-note", "No requests yet."));
       return;
@@ -466,7 +533,7 @@
     for (i = 0; i < issues.length; i++) {
       var issue = issues[i];
       var reply = state.replies[String(issue.number)];
-      var st = statusOf(issue, reply);
+      var st = issue.queued ? {text: "Queued", cls: "wait"} : statusOf(issue, reply);
       var card = node("article", "ask-item");
       card.appendChild(node("b", "", issue.title || "Request"));
       var metaRow = node("div", "ask-meta");
@@ -600,8 +667,10 @@
     };
     postRequest(payload, function (res) {
       sendBtn.disabled = false;
-      if (res.ok) showThanks();
-      else if (!res.configured) showFallback("This screen can't file the request itself until Weston turns the connection on. Nothing was sent. The link is public, so skip anything private.");
+      if (res.ok) {
+        if (res.queued && res.id) rememberPending(res.id, currentIssue());
+        showThanks();
+      } else if (!res.configured) showFallback("This screen can't file the request itself until Weston turns the connection on. Nothing was sent. The link is public, so skip anything private.");
       else showFallback((res.error ? res.error + " " : "") + "Nothing was filed. The link below is public.");
     });
   }

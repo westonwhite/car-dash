@@ -146,6 +146,13 @@ var shaped = ask.shapeMemos([
 ]);
 assert.strictEqual(shaped.items[0].text, "newer");
 assert.strictEqual(shaped.unread, 1);
+var kept = ask.dropSeen(
+  [{id: "9-1", title: "still queued"}, {id: "8-2", title: "filed"}],
+  [{body: "hello\n\nQueue-Id: 8-2", title: "filed"}]
+);
+assert.strictEqual(kept.length, 1);
+assert.strictEqual(kept[0].id, "9-1");
+assert.strictEqual(ask.statusOf({queued: true, labels: []}, null).text, "Queued");
 
 var fs = require("fs");
 var src = fs.readFileSync(__dirname + "/../suggest.js", "utf8") +

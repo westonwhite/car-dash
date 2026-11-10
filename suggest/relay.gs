@@ -1,15 +1,14 @@
 /**
- * Car dashboards POST a request here. This script files a GitHub issue.
- * The token stays in Script properties, never in the website.
+ * Car dashboards POST a request here. This script does not call GitHub.
+ * It stores the request in a queue. A machine running suggest/sync_requests.py
+ * files the GitHub issue and acks the queue.
  *
  * Setup: suggest/SETUP.md
- *   GITHUB_TOKEN  issues-only fine-grained PAT for the public requests repo
- *   GITHUB_REPO   owner/name, default westonwhite/dash-requests
+ *   WESTON_EMAIL, ANNA_EMAIL, MEMO_KEY_WESTON, MEMO_KEY_ANNA, SYNC_KEY
  *
  * Deploy as a web app: execute as me, access Anyone.
  * The page POSTs text/plain so the browser can read the reply.
  */
-var DEFAULT_REPO = "westonwhite/dash-requests";
 var MAX_TEXT = 2000;
 var LABEL_META = {
   "anna-request": ["7c3aed", "Request from Anna's page"],
@@ -20,12 +19,13 @@ var LABEL_META = {
   "suggestion": ["0e8a16", "Change requested from the car"],
   "nav-request": ["c2410c", "Send this destination to the car's navigation"],
   "memo-to-weston": ["1d4e89", "Memo from Anna to Weston"],
-  "memo-to-anna": ["7c3aed", "Memo from Weston to Anna"],
+  "memo-to-anna": ["7c3aed", "Memo from Weston to Anna"]
 };
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === "memos") return json(listMemos(p["for"], p.key));
+  if (p.action === "queue") return json(listQueue(p.key));
   return json({ok: true, ready: true});
 }
 
@@ -36,6 +36,7 @@ function doPost(e) {
     try { data = JSON.parse(raw); } catch (err) { return json({ok: false, error: "Bad request"}); }
     if (!data || typeof data !== "object") return json({ok: false, error: "Bad request"});
     if (data.action === "read") return json(markMemoRead(data["for"], data.key, data.id));
+    if (data.action === "ack") return json(ackQueue(data.key, data.ids, data.issues));
     if (data.company) return json({ok: false, error: "Rejected"});
     var text = clip(data.text, MAX_TEXT);
     if (!text) return json({ok: false, error: "Write a request first"});
@@ -66,8 +67,8 @@ function doPost(e) {
         label: info.when
       });
     }
-    var created = createIssue(issue);
-    return json({ok: true, number: created.number});
+    var id = enqueue(issue, info, text);
+    return json({ok: true, queued: true, id: id});
   } catch (err2) {
     return json({ok: false, error: String(err2 && err2.message ? err2.message : err2).slice(0, 180)});
   }
@@ -88,6 +89,15 @@ function previewText(text, n) {
   var flat = String(text || "").replace(/\s+/g, " ");
   if (flat.length <= n) return flat;
   return flat.slice(0, n) + "...";
+}
+
+function knownLabels(labels) {
+  var out = [];
+  var i;
+  for (i = 0; i < labels.length; i++) {
+    if (LABEL_META[labels[i]] && out.indexOf(labels[i]) === -1) out.push(labels[i]);
+  }
+  return out;
 }
 
 function makeIssue(text, info) {
@@ -185,6 +195,115 @@ function sendPersonMail(text, info) {
   MailApp.sendEmail(to, subject, body);
 }
 
+function readIndex(name) {
+  var raw = PropertiesService.getScriptProperties().getProperty(name);
+  var index = [];
+  try { index = JSON.parse(raw || "[]"); } catch (e) { index = []; }
+  if (!index || typeof index.unshift !== "function") index = [];
+  return index;
+}
+
+function enqueue(issue, info, text) {
+  var props = PropertiesService.getScriptProperties();
+  var id = String(new Date().getTime()) + "-" + Math.floor(Math.random() * 1000);
+  var labels = knownLabels(issue.labels || []);
+  var rec = {
+    id: id,
+    created: new Date().toISOString(),
+    title: clip(issue.title, 240),
+    body: String(issue.body || "") + "\n\nQueue-Id: " + id,
+    labels: labels,
+    kind: info.kind || "",
+    requester: info.requester,
+    audience: info.audience || "",
+    tag: info.tag || "",
+    name: info.name || "",
+    address: info.address || "",
+    lat: info.lat,
+    lon: info.lon,
+    car: info.car || "",
+    page: info.page || "",
+    url: info.url || "",
+    when: info.when || "",
+    screen: info.screen || "",
+    text: clip(text, MAX_TEXT),
+    synced: false,
+    issue: null
+  };
+  var packed = JSON.stringify(rec);
+  if (packed.length > 8500) {
+    rec.text = "";
+    packed = JSON.stringify(rec);
+  }
+  props.setProperty("QUEUE_" + id, packed);
+  var index = readIndex("QUEUE_INDEX");
+  index.unshift(id);
+  if (index.length > 40) {
+    var drop = index.slice(40);
+    index = index.slice(0, 40);
+    var i;
+    for (i = 0; i < drop.length; i++) props.deleteProperty("QUEUE_" + drop[i]);
+  }
+  props.setProperty("QUEUE_INDEX", JSON.stringify(index));
+  return id;
+}
+
+function syncKeyOk(key) {
+  var expect = clip(PropertiesService.getScriptProperties().getProperty("SYNC_KEY"), 80);
+  return !!expect && clip(key, 80) === expect;
+}
+
+function listQueue(key) {
+  if (!syncKeyOk(key)) return {ok: false, error: "SYNC_KEY is not set"};
+  var props = PropertiesService.getScriptProperties();
+  var index = readIndex("QUEUE_INDEX");
+  var out = [];
+  var i;
+  for (i = 0; i < index.length; i++) {
+    var raw = props.getProperty("QUEUE_" + index[i]);
+    if (!raw) continue;
+    var rec = null;
+    try { rec = JSON.parse(raw); } catch (e) { rec = null; }
+    if (!rec || rec.synced) continue;
+    out.push(rec);
+  }
+  return {ok: true, items: out};
+}
+
+function ackQueue(key, ids, issues) {
+  if (!syncKeyOk(key)) return {ok: false, error: "SYNC_KEY is not set"};
+  if (!ids || typeof ids.length !== "number") return {ok: false, error: "Bad ids"};
+  issues = issues || {};
+  var props = PropertiesService.getScriptProperties();
+  var done = {};
+  try { done = JSON.parse(props.getProperty("QUEUE_DONE") || "{}"); } catch (e) { done = {}; }
+  if (!done || typeof done !== "object") done = {};
+  var i, id, raw, rec, num;
+  for (i = 0; i < ids.length; i++) {
+    id = String(ids[i] || "");
+    if (!/^[0-9]+-[0-9]+$/.test(id)) continue;
+    raw = props.getProperty("QUEUE_" + id);
+    num = parseInt(issues[id], 10);
+    if (raw) {
+      try { rec = JSON.parse(raw); } catch (e2) { rec = null; }
+      if (rec) {
+        rec.synced = true;
+        if (num) rec.issue = num;
+        props.setProperty("QUEUE_" + id, JSON.stringify(rec));
+      }
+    }
+    if (num) done[id] = num;
+  }
+  var keys = [];
+  for (id in done) if (done.hasOwnProperty(id)) keys.push(id);
+  if (keys.length > 80) {
+    keys.sort();
+    for (i = 0; i < keys.length - 80; i++) delete done[keys[i]];
+  }
+  props.setProperty("QUEUE_DONE", JSON.stringify(done));
+  return {ok: true};
+}
+
 function memoKeyOk(who, key) {
   if (who !== "anna" && who !== "weston") return false;
   var expect = PropertiesService.getScriptProperties().getProperty(who === "anna" ? "MEMO_KEY_ANNA" : "MEMO_KEY_WESTON");
@@ -206,9 +325,7 @@ function saveMemo(memo) {
     read: false
   };
   props.setProperty("MEMO_" + id, JSON.stringify(rec));
-  var index = [];
-  try { index = JSON.parse(props.getProperty("MEMOS_INDEX") || "[]"); } catch (e) { index = []; }
-  if (!index || !index.length && !index.unshift) index = [];
+  var index = readIndex("MEMOS_INDEX");
   index.unshift(id);
   if (index.length > 40) {
     var drop = index.slice(40);
@@ -222,8 +339,7 @@ function saveMemo(memo) {
 function listMemos(who, key) {
   if (!memoKeyOk(who, key)) return {ok: false, error: "Memos aren't set up"};
   var props = PropertiesService.getScriptProperties();
-  var index = [];
-  try { index = JSON.parse(props.getProperty("MEMOS_INDEX") || "[]"); } catch (e2) { index = []; }
+  var index = readIndex("MEMOS_INDEX");
   var out = [];
   var i;
   for (i = 0; i < index.length; i++) {
@@ -262,61 +378,6 @@ function tooMany() {
   } catch (e) {
     return false;
   }
-}
-
-function props() {
-  var p = PropertiesService.getScriptProperties();
-  var token = p.getProperty("GITHUB_TOKEN");
-  var repo = p.getProperty("GITHUB_REPO") || DEFAULT_REPO;
-  if (!token) throw new Error("GITHUB_TOKEN is not set");
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error("GITHUB_REPO is not owner/name");
-  return {token: token, repo: repo};
-}
-
-function gh(path, method, body, token) {
-  var opt = {
-    method: method,
-    contentType: "application/json",
-    headers: {
-      Authorization: "Bearer " + token,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "dash-ask-relay",
-      "X-GitHub-Api-Version": "2022-11-28"
-    },
-    muteHttpExceptions: true
-  };
-  if (body) opt.payload = JSON.stringify(body);
-  var res = UrlFetchApp.fetch("https://api.github.com" + path, opt);
-  var code = res.getResponseCode();
-  var parsed = null;
-  try { parsed = JSON.parse(res.getContentText() || ""); } catch (e) {}
-  return {code: code, data: parsed};
-}
-
-function ensureLabel(repo, token, name) {
-  var meta = LABEL_META[name];
-  if (!meta) return;
-  var got = gh("/repos/" + repo + "/labels/" + encodeURIComponent(name), "get", null, token);
-  if (got.code === 200) return;
-  gh("/repos/" + repo + "/labels", "post", {name: name, color: meta[0], description: meta[1]}, token);
-}
-
-function createIssue(issue) {
-  var cfg = props();
-  var labels = [];
-  var i;
-  for (i = 0; i < issue.labels.length; i++) {
-    if (!LABEL_META[issue.labels[i]] || labels.indexOf(issue.labels[i]) !== -1) continue;
-    labels.push(issue.labels[i]);
-    ensureLabel(cfg.repo, cfg.token, issue.labels[i]);
-  }
-  var res = gh("/repos/" + cfg.repo + "/issues", "post", {
-    title: issue.title,
-    body: issue.body,
-    labels: labels
-  }, cfg.token);
-  if (res.code !== 201 || !res.data || !res.data.number) throw new Error("GitHub returned " + res.code);
-  return res.data;
 }
 
 function json(obj) {
