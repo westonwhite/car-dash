@@ -201,7 +201,7 @@ function sendPersonMail(text, info) {
 function notifyBot(text, info, id) {
   var to = clip(PropertiesService.getScriptProperties().getProperty("BOT_NOTIFY_EMAIL"), 200);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
-  var forBot = info.audience === "grok" || info.kind === "nav" || (info.kind === "person" && info.requester === "anna");
+  var forBot = info.kind === "person" ? info.requester === "anna" : (info.audience === "grok" || info.kind === "nav");
   if (!forBot) return;
   var who = info.requester === "anna" ? "Anna" : "Weston";
   var what = info.kind === "person" ? "memo to Weston" : (info.kind === "nav" ? "nav request" : "request for Grok Bot");
