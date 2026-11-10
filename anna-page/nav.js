@@ -51,6 +51,20 @@
     tick();
     timer = setInterval(tick, 60000);
   }
+  function watchQueued(id) {
+    stop();
+    function tick() {
+      if (!window.DashAsk || !DashAsk.findByQueueId) return;
+      DashAsk.findByQueueId(id, function (issue) {
+        if (issue && issue.number) {
+          stop();
+          watch(issue.number);
+        }
+      });
+    }
+    tick();
+    timer = setInterval(tick, 60000);
+  }
   function buttons(disabled, label) {
     var ids = ["navSend", "rnavSend"];
     var i;
@@ -104,6 +118,7 @@
       if (res && res.ok) {
         setState("Queued for the car. This changes to Sent to car navigation when it's done.", false);
         if (res.number) watch(res.number);
+        else if (res.queued && res.id) watchQueued(res.id);
       } else if (res && res.configured === false) {
         setState("Not connected yet, so the car wasn't updated. Use Google Maps or Apple Maps.", false);
       } else {
