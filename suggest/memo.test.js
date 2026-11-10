@@ -140,6 +140,13 @@ assert.ok(previewLine.length <= 83);
 assert.strictEqual(ask.statusOf({state: "open", labels: [{name: "memo-to-anna"}], comments: 0}, null).text, "Memo to Anna");
 assert.strictEqual(ask.statusOf({state: "open", labels: ["memo-to-weston"], comments: 0}, null).text, "Memo to Weston");
 
+var shaped = ask.shapeMemos([
+  {id: "1", from: "Weston", text: "older", at: "2026-11-10T15:00:00.000Z", read: true},
+  {id: "2", from: "Weston", text: "newer", at: "2026-11-10T16:00:00.000Z", read: false}
+]);
+assert.strictEqual(shaped.items[0].text, "newer");
+assert.strictEqual(shaped.unread, 1);
+
 var fs = require("fs");
 var src = fs.readFileSync(__dirname + "/../suggest.js", "utf8") +
   fs.readFileSync(__dirname + "/../ask-config.js", "utf8") +
@@ -151,5 +158,10 @@ assert.ok(src.indexOf("anna-request") >= 0);
 assert.ok(src.indexOf("weston-request") >= 0);
 assert.ok(src.indexOf("for-grokbot") >= 0);
 assert.ok(src.indexOf("for-muse") >= 0);
+var repoFiles = src + fs.readFileSync(__dirname + "/SETUP.md", "utf8") +
+  fs.readFileSync(__dirname + "/../hub.html", "utf8");
+assert.ok(!/@[a-z0-9.-]+\.[a-z]{2,}/i.test(repoFiles));
+assert.ok(repoFiles.indexOf("MEMO_KEY_ANNA") >= 0);
+assert.ok(repoFiles.indexOf("Memos will appear here once setup is done") >= 0);
 
 console.log("ask tests ok");

@@ -5,5 +5,8 @@ window.ASK_CONFIG = {
   endpoint: "",
   repo: "westonwhite/dash-requests",
   /* Optional. Adds an Email button only to the not-connected fallback. */
-  mail: ""
+  mail: "",
+  /* Same phrase as MEMO_KEY_WESTON in the relay. Not a real secret.
+     Leave empty until setup. Anyone who can view this file can read Weston's inbox. */
+  memoKey: ""
 };

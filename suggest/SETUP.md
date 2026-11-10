@@ -55,8 +55,10 @@ Copy the token once. It goes only in the script property in the next step. When 
 3. Project settings → Script properties. Do not put these in the website:
    - `GITHUB_TOKEN` = the token from step 2
    - `GITHUB_REPO` = `westonwhite/dash-requests`
-   - `WESTON_EMAIL` = `smithmweston@gmail.com` (Anna's memos are emailed here)
-   - `ANNA_EMAIL` = Anna's email address. Type it only in this property. Do not commit it, and do not put it in any file in this repo or on the page.
+   - `WESTON_EMAIL` = the Gmail address that should receive Anna's memos. Type it only here.
+   - `ANNA_EMAIL` = Anna's email address. Type it only here. Do not commit either address.
+   - `MEMO_KEY_WESTON` = a short phrase you invent for Weston's page
+   - `MEMO_KEY_ANNA` = a different short phrase for Anna's page
 4. Deploy → New deployment → type **Web app**.
    - Execute as: **Me** (this is the Google account the mail is sent from)
    - Who has access: **Anyone**
@@ -66,9 +68,9 @@ Opening that URL in a browser should show `{"ok":true,"ready":true}`.
 
 ## 4. Point the dashboards at it
 
-In `ask-config.js`, set `endpoint` to that `/exec` URL (https only). Do the same in `westonwhite/anna`'s `ask-config.js`.
+In `ask-config.js` on this repo (Weston's pages), set `endpoint` to that `/exec` URL (https only) and set `memoKey` to the same phrase as `MEMO_KEY_WESTON`. In Anna's `ask-config.js`, set the same `endpoint` and set `memoKey` to the same phrase as `MEMO_KEY_ANNA`.
 
-`repo` stays `westonwhite/dash-requests`. That is the public repo the page reads.
+`repo` stays `westonwhite/dash-requests`. That is the public repo the page reads for Ask Grok Bot. Memo text is not stored there.
 
 Optional: set `mail` to an address you actually read. That only adds an Email button to the not-connected fallback.
 
@@ -86,7 +88,11 @@ On hub.html, send a note for Grok Bot, then a change for Muse. On Anna's page, s
 
 On Anna's page, choose **Send a memo to Weston** and send a note. That files an issue labeled `memo-to-weston` and `anna-request`, and emails the full text to `WESTON_EMAIL` with the subject `Memo from Anna (Caroline's whip)`. The car says **Memo sent to Weston**.
 
-On hub.html, choose **Send a memo to Anna**. That emails the full text to `ANNA_EMAIL` with the subject `Memo from Weston (Mission Control)`, and files an issue labeled `memo-to-anna` and `weston-request`. The public issue title is `Memo to Anna` and the body keeps only the first 80 characters. The car says **Memo sent to Anna**. If `ANNA_EMAIL` or `WESTON_EMAIL` is missing, the relay does not file the issue and does not claim it was sent.
+On hub.html, choose **Send a memo to Anna**. That emails the full text to `ANNA_EMAIL` with the subject `Memo from Weston (Mission Control)`, and files an issue labeled `memo-to-anna` and `weston-request`. The public issue title is `Memo to Anna` and the body keeps only the first 80 characters. The full text is stored only in the relay. The car says **Memo sent to Anna**. If `ANNA_EMAIL` or `WESTON_EMAIL` is missing, the relay does not file the issue and does not claim it was sent.
+
+Weston's hub shows a **Memos from Anna** card. Anna's page shows **Memos from Weston**. Newest first, with the sender, time, full text, and a New badge. Tapping a memo marks it read. The cards read `GET {endpoint}?action=memos&for=weston|anna&key=…`. Until `endpoint` and `memoKey` are set, the card says **Memos will appear here once setup is done.**
+
+The page key is not a real secret. It is in `ask-config.js`, so anyone who can view the page source can call the relay and read that page's memos. It only stops someone who stumbles on the relay URL without the key. Do not put passwords or account numbers in a memo.
 
 The script creates those labels on the first send. The car shows **Thanks, sent!** for a Grok Bot or Muse request only after GitHub accepts the issue. Open the box again: the request is listed. Comment on it and close it, wait for the refresh, and the comment shows with status Answered.
 

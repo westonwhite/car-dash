@@ -35,7 +35,8 @@
     return {
       endpoint: safeEndpoint(c.endpoint),
       repo: safeRepo(c.repo),
-      mail: safeMail(c.mail)
+      mail: safeMail(c.mail),
+      memoKey: clip(c.memoKey, 80)
     };
   }
   function meta() {
@@ -216,6 +217,15 @@
     }
     return found;
   }
+  function shapeMemos(list) {
+    var items = (list || []).slice().sort(function (a, b) {
+      return String(b.at || b.when || "").localeCompare(String(a.at || a.when || ""));
+    });
+    var unread = 0;
+    var i;
+    for (i = 0; i < items.length; i++) if (!items[i].read) unread++;
+    return {items: items, unread: unread};
+  }
   function postRequest(payload, cb) {
     var cfg = config();
     if (!cfg.endpoint) { cb({ok: false, configured: false}); return; }
@@ -266,6 +276,7 @@
     safeEndpoint: safeEndpoint,
     statusOf: statusOf,
     latestReplies: latestReplies,
+    shapeMemos: shapeMemos,
     hasLabel: hasLabel,
     meta: meta,
     postRequest: postRequest,
@@ -633,4 +644,74 @@
     root.visualViewport.addEventListener("scroll", fit);
   }
   root.addEventListener("resize", fit);
+
+  var inboxEl = document.getElementById("memoInbox");
+  if (inboxEl) {
+    var inboxTitle = requester === "anna" ? "Memos from Weston" : "Memos from Anna";
+    inboxEl.innerHTML = '<div class="inbox-top"><h2>' + inboxTitle + '</h2><span class="inbox-badge" id="inboxBadge" hidden></span></div><div class="inbox-list" id="inboxList"></div>';
+    renderInbox({setup: true});
+    loadInbox();
+    root.setInterval(function () { if (!document.hidden) loadInbox(); }, POLL_MS);
+  }
+  function renderInbox(state) {
+    var list = document.getElementById("inboxList");
+    var badge = document.getElementById("inboxBadge");
+    if (!list) return;
+    while (list.firstChild) list.removeChild(list.firstChild);
+    if (!state || state.setup) {
+      if (badge) badge.hidden = true;
+      list.appendChild(node("p", "inbox-note", "Memos will appear here once setup is done."));
+      return;
+    }
+    if (state.error) {
+      if (badge) badge.hidden = true;
+      list.appendChild(node("p", "inbox-note", state.error));
+      return;
+    }
+    var shaped = shapeMemos(state.memos || []);
+    if (badge) {
+      badge.hidden = shaped.unread < 1;
+      badge.textContent = shaped.unread === 1 ? "1 new" : shaped.unread + " new";
+    }
+    if (!shaped.items.length) {
+      list.appendChild(node("p", "inbox-note", "No memos yet."));
+      return;
+    }
+    var i;
+    for (i = 0; i < shaped.items.length; i++) {
+      (function (memo) {
+        var row = node("button", "inbox-item" + (memo.read ? "" : " unread"));
+        row.type = "button";
+        var meta = node("div", "meta");
+        meta.appendChild(node("b", "", memo.from || "Memo"));
+        meta.appendChild(node("span", "", memo.label || memo.at || ""));
+        if (!memo.read) meta.appendChild(node("span", "inbox-new", "New"));
+        row.appendChild(meta);
+        row.appendChild(node("p", "", memo.text || ""));
+        row.addEventListener("click", function () { if (!memo.read) markRead(memo.id, row); });
+        list.appendChild(row);
+      })(shaped.items[i]);
+    }
+  }
+  function loadInbox() {
+    var cfg = config();
+    if (!cfg.endpoint || !cfg.memoKey) { renderInbox({setup: true}); return; }
+    var join = cfg.endpoint.indexOf("?") >= 0 ? "&" : "?";
+    var url = cfg.endpoint + join + "action=memos&for=" + encodeURIComponent(requester) + "&key=" + encodeURIComponent(cfg.memoKey);
+    root.fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data || data.ok === false) renderInbox({error: "Couldn't load memos."});
+      else renderInbox({memos: data.memos || []});
+    }).catch(function () { renderInbox({error: "Couldn't load memos."}); });
+  }
+  function markRead(id, row) {
+    var cfg = config();
+    if (!cfg.endpoint || !cfg.memoKey || !id) return;
+    postRequest({action: "read", id: id, "for": requester, key: cfg.memoKey}, function (res) {
+      if (!res || !res.ok) return;
+      var pill = row.querySelector(".inbox-new");
+      if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+      row.className = "inbox-item";
+      loadInbox();
+    });
+  }
 })(typeof window !== "undefined" ? window : this);

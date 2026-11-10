@@ -23,7 +23,9 @@ var LABEL_META = {
   "memo-to-anna": ["7c3aed", "Memo from Weston to Anna"],
 };
 
-function doGet() {
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.action === "memos") return json(listMemos(p["for"], p.key));
   return json({ok: true, ready: true});
 }
 
@@ -33,6 +35,7 @@ function doPost(e) {
     var data;
     try { data = JSON.parse(raw); } catch (err) { return json({ok: false, error: "Bad request"}); }
     if (!data || typeof data !== "object") return json({ok: false, error: "Bad request"});
+    if (data.action === "read") return json(markMemoRead(data["for"], data.key, data.id));
     if (data.company) return json({ok: false, error: "Rejected"});
     var text = clip(data.text, MAX_TEXT);
     if (!text) return json({ok: false, error: "Write a request first"});
@@ -54,7 +57,15 @@ function doPost(e) {
       screen: clip(data.screen, 160)
     };
     var issue = makeIssue(text, info);
-    if (info.kind === "person") sendPersonMail(text, info);
+    if (info.kind === "person") {
+      sendPersonMail(text, info);
+      saveMemo({
+        to: info.requester === "anna" ? "weston" : "anna",
+        from: info.requester === "anna" ? "Anna" : "Weston",
+        text: text,
+        label: info.when
+      });
+    }
     var created = createIssue(issue);
     return json({ok: true, number: created.number});
   } catch (err2) {
@@ -172,6 +183,71 @@ function sendPersonMail(text, info) {
     text
   ].join("\n");
   MailApp.sendEmail(to, subject, body);
+}
+
+function memoKeyOk(who, key) {
+  if (who !== "anna" && who !== "weston") return false;
+  var expect = PropertiesService.getScriptProperties().getProperty(who === "anna" ? "MEMO_KEY_ANNA" : "MEMO_KEY_WESTON");
+  expect = clip(expect, 80);
+  key = clip(key, 80);
+  return !!expect && key === expect;
+}
+
+function saveMemo(memo) {
+  var props = PropertiesService.getScriptProperties();
+  var id = String(new Date().getTime()) + "-" + Math.floor(Math.random() * 1000);
+  var rec = {
+    id: id,
+    to: memo.to,
+    from: memo.from,
+    text: clip(memo.text, MAX_TEXT),
+    at: new Date().toISOString(),
+    label: clip(memo.label, 120),
+    read: false
+  };
+  props.setProperty("MEMO_" + id, JSON.stringify(rec));
+  var index = [];
+  try { index = JSON.parse(props.getProperty("MEMOS_INDEX") || "[]"); } catch (e) { index = []; }
+  if (!index || !index.length && !index.unshift) index = [];
+  index.unshift(id);
+  if (index.length > 40) {
+    var drop = index.slice(40);
+    index = index.slice(0, 40);
+    var i;
+    for (i = 0; i < drop.length; i++) props.deleteProperty("MEMO_" + drop[i]);
+  }
+  props.setProperty("MEMOS_INDEX", JSON.stringify(index));
+}
+
+function listMemos(who, key) {
+  if (!memoKeyOk(who, key)) return {ok: false, error: "Memos aren't set up"};
+  var props = PropertiesService.getScriptProperties();
+  var index = [];
+  try { index = JSON.parse(props.getProperty("MEMOS_INDEX") || "[]"); } catch (e2) { index = []; }
+  var out = [];
+  var i;
+  for (i = 0; i < index.length; i++) {
+    var raw = props.getProperty("MEMO_" + index[i]);
+    if (!raw) continue;
+    var rec = null;
+    try { rec = JSON.parse(raw); } catch (e3) { rec = null; }
+    if (!rec || rec.to !== who) continue;
+    out.push({id: rec.id, from: rec.from, text: rec.text, at: rec.at, label: rec.label, read: !!rec.read});
+  }
+  return {ok: true, memos: out};
+}
+
+function markMemoRead(who, key, id) {
+  if (!memoKeyOk(who, key)) return {ok: false, error: "Memos aren't set up"};
+  if (!/^[0-9]+-[0-9]+$/.test(String(id || ""))) return {ok: false, error: "Bad id"};
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty("MEMO_" + id);
+  if (!raw) return {ok: false, error: "Missing"};
+  var rec = JSON.parse(raw);
+  if (!rec || rec.to !== who) return {ok: false, error: "Missing"};
+  rec.read = true;
+  props.setProperty("MEMO_" + id, JSON.stringify(rec));
+  return {ok: true};
 }
 
 function tooMany() {
