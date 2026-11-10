@@ -1,8 +1,10 @@
 /* Ask Grok Bot for the car dashboards.
    ES5 on purpose: Anna's page is written for the in-car browser.
    This file never holds a GitHub token. Creating an issue goes through
-   the relay in suggest/SETUP.md. Reading answers uses the public
-   GitHub API with no token, and only while this box is open. */
+   the relay in suggest/SETUP.md. The Ask box reads answers from the public
+   GitHub API with no token, and only while that box is open. The Memos
+   tab on Mission Control reads sanitized channel.json on this site plus
+   Anna's memos from the relay. */
 (function (root) {
   var MAX = 2000;
   var POLL_MS = 120000;
@@ -232,12 +234,82 @@
     }
     return out;
   }
+  function activityOf(item) {
+    var latest = String((item && (item.at || item.when)) || "");
+    var replies = (item && item.replies) || [];
+    var i;
+    for (i = 0; i < replies.length; i++) {
+      var t = String((replies[i] && replies[i].at) || "");
+      if (t > latest) latest = t;
+    }
+    return latest;
+  }
+  function formatStamp(value) {
+    var raw = String(value || "");
+    if (!raw) return "";
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw;
+    try {
+      return new Date(raw).toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit"
+      }) + " ET";
+    } catch (e) {
+      return raw;
+    }
+  }
   function shapeMemos(list) {
     var items = (list || []).slice().sort(function (a, b) {
       return String(b.at || b.when || "").localeCompare(String(a.at || a.when || ""));
     });
     var unread = 0;
     var i;
+    for (i = 0; i < items.length; i++) if (!items[i].read) unread++;
+    return {items: items, unread: unread};
+  }
+  function shapeChannel(memos, threads) {
+    var items = [];
+    var i, j;
+    for (i = 0; i < (memos || []).length; i++) {
+      var memo = memos[i] || {};
+      items.push({
+        id: memo.id,
+        kind: "anna",
+        from: "From Anna",
+        text: memo.text || "",
+        at: memo.at || memo.when || "",
+        label: memo.label || "",
+        read: !!memo.read,
+        replies: []
+      });
+    }
+    for (i = 0; i < (threads || []).length; i++) {
+      var thread = threads[i] || {};
+      var replies = [];
+      var rows = thread.replies || [];
+      for (j = 0; j < rows.length; j++) {
+        replies.push({
+          from: "Grok Bot reply",
+          text: (rows[j] && rows[j].text) || "",
+          at: (rows[j] && rows[j].at) || ""
+        });
+      }
+      items.push({
+        id: "g-" + (thread.number || i),
+        kind: "grok",
+        from: "You to Grok Bot",
+        text: thread.text || "",
+        at: thread.at || "",
+        label: "",
+        read: !!thread.read,
+        replies: replies,
+        state: thread.state || ""
+      });
+    }
+    items.sort(function (a, b) {
+      return activityOf(b).localeCompare(activityOf(a));
+    });
+    var unread = 0;
     for (i = 0; i < items.length; i++) if (!items[i].read) unread++;
     return {items: items, unread: unread};
   }
@@ -308,6 +380,9 @@
     statusOf: statusOf,
     latestReplies: latestReplies,
     shapeMemos: shapeMemos,
+    shapeChannel: shapeChannel,
+    activityOf: activityOf,
+    formatStamp: formatStamp,
     dropSeen: dropSeen,
     hasLabel: hasLabel,
     meta: meta,
@@ -716,7 +791,7 @@
 
   var inboxEl = document.getElementById("memoInbox");
   if (inboxEl) {
-    var inboxTitle = requester === "anna" ? "Memos from Weston" : "Memos from Anna";
+    var inboxTitle = requester === "anna" ? "Memos from Weston" : "Memos";
     inboxEl.innerHTML = '<div class="inbox-top"><h2>' + inboxTitle + '</h2><span class="inbox-badge" id="inboxBadge" hidden></span></div><div class="inbox-list" id="inboxList"></div>';
     renderInbox({setup: true});
     loadInbox();
@@ -732,45 +807,158 @@
       list.appendChild(node("p", "inbox-note", "Memos will appear here once setup is done."));
       return;
     }
-    if (state.error) {
+    if (state.error && !(state.memos && state.memos.length) && !(state.threads && state.threads.length)) {
       if (badge) badge.hidden = true;
       list.appendChild(node("p", "inbox-note", state.error));
       return;
     }
-    var shaped = shapeMemos(state.memos || []);
+    var shaped = requester === "weston"
+      ? shapeChannel(state.memos || [], state.threads || [])
+      : shapeMemos(state.memos || []);
     if (badge) {
       badge.hidden = shaped.unread < 1;
       badge.textContent = shaped.unread === 1 ? "1 new" : shaped.unread + " new";
     }
     if (!shaped.items.length) {
-      list.appendChild(node("p", "inbox-note", "No memos yet."));
+      list.appendChild(node("p", "inbox-note", requester === "weston" ? "No memos or replies yet." : "No memos yet."));
       return;
     }
     var i;
     for (i = 0; i < shaped.items.length; i++) {
       (function (memo) {
-        var row = node("button", "inbox-item" + (memo.read ? "" : " unread"));
+        var isThread = memo.kind === "grok";
+        var row = node("button", "inbox-item" + (isThread ? " inbox-thread" : "") + (memo.read ? "" : " unread"));
         row.type = "button";
         var meta = node("div", "meta");
         meta.appendChild(node("b", "", memo.from || "Memo"));
-        meta.appendChild(node("span", "", memo.label || memo.at || ""));
+        meta.appendChild(node("span", "", formatStamp(memo.label || memo.at || "")));
         if (!memo.read) meta.appendChild(node("span", "inbox-new", "New"));
         row.appendChild(meta);
         row.appendChild(node("p", "", memo.text || ""));
-        row.addEventListener("click", function () { if (!memo.read) markRead(memo.id, row); });
+        if (isThread) {
+          var replies = memo.replies || [];
+          var r;
+          if (!replies.length) {
+            row.appendChild(node("p", "inbox-wait", "No reply yet."));
+          } else {
+            for (r = 0; r < replies.length; r++) {
+              var box = node("div", "inbox-reply");
+              var rmeta = node("div", "meta");
+              rmeta.appendChild(node("b", "", replies[r].from || "Grok Bot reply"));
+              rmeta.appendChild(node("span", "", formatStamp(replies[r].at || "")));
+              box.appendChild(rmeta);
+              box.appendChild(node("p", "", replies[r].text || ""));
+              row.appendChild(box);
+            }
+          }
+        }
+        row.addEventListener("click", function () {
+          if (isThread) markThreadSeen(memo.id, row);
+          else if (!memo.read) markRead(memo.id, row);
+        });
         list.appendChild(row);
       })(shaped.items[i]);
     }
   }
-  function loadInbox() {
+  function channelUrl() {
+    var url = "channel.json";
+    try {
+      var here = root.location && root.location.href ? root.location.href.split("#")[0] : "";
+      if (here && typeof URL !== "undefined") url = new URL("channel.json", here).toString();
+    } catch (e) {}
+    return url + (url.indexOf("?") >= 0 ? "&" : "?") + "t=" + Math.floor(Date.now() / POLL_MS);
+  }
+  function seenMap() {
+    try {
+      return JSON.parse((root.localStorage && localStorage.getItem("dash-channel-seen")) || "{}") || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function markThreadReadFlags(threads) {
+    var seen = seenMap();
+    var i;
+    var out = [];
+    for (i = 0; i < (threads || []).length; i++) {
+      var thread = threads[i] || {};
+      var copy = {
+        number: thread.number,
+        text: thread.text || "",
+        at: thread.at || "",
+        state: thread.state || "",
+        replies: thread.replies || []
+      };
+      var latest = activityOf({at: copy.at, replies: copy.replies});
+      var seenAt = seen["g-" + copy.number];
+      var hasReply = copy.replies && copy.replies.length > 0;
+      copy.read = !hasReply || (!!seenAt && Date.parse(latest) <= Number(seenAt));
+      out.push(copy);
+    }
+    return out;
+  }
+  function loadMemos() {
     var cfg = config();
-    if (!cfg.endpoint || !cfg.memoKey) { renderInbox({setup: true}); return; }
+    if (!cfg.endpoint || !cfg.memoKey) {
+      return Promise.resolve({setup: true, memos: []});
+    }
     var join = cfg.endpoint.indexOf("?") >= 0 ? "&" : "?";
     var url = cfg.endpoint + join + "action=memos&for=" + encodeURIComponent(requester) + "&key=" + encodeURIComponent(cfg.memoKey);
-    root.fetch(url).then(function (r) { return r.json(); }).then(function (data) {
-      if (!data || data.ok === false) renderInbox({error: "Couldn't load memos."});
-      else renderInbox({memos: data.memos || []});
-    }).catch(function () { renderInbox({error: "Couldn't load memos."}); });
+    return root.fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data || data.ok === false) return {error: "Couldn't load memos.", memos: []};
+      return {memos: data.memos || []};
+    }).catch(function () { return {error: "Couldn't load memos.", memos: []}; });
+  }
+  function loadThreads() {
+    if (requester !== "weston") return Promise.resolve({threads: []});
+    return root.fetch(channelUrl()).then(function (r) {
+      if (r.status === 404) return {threads: []};
+      if (!r.ok) return {error: "Couldn't load Grok Bot replies.", threads: []};
+      return r.json().then(function (data) {
+        return {threads: markThreadReadFlags((data && data.threads) || [])};
+      });
+    }).catch(function () { return {error: "Couldn't load Grok Bot replies.", threads: []}; });
+  }
+  function loadInbox() {
+    if (requester !== "weston") {
+      loadMemos().then(function (res) {
+        if (res.setup) renderInbox({setup: true});
+        else if (res.error) renderInbox({error: res.error});
+        else renderInbox({memos: res.memos || []});
+      });
+      return;
+    }
+    Promise.all([loadMemos(), loadThreads()]).then(function (parts) {
+      var memosRes = parts[0] || {};
+      var threadRes = parts[1] || {};
+      var memos = memosRes.memos || [];
+      var threads = threadRes.threads || [];
+      if (memosRes.setup && !threads.length && threadRes.error) {
+        renderInbox({error: threadRes.error, memos: [], threads: []});
+        return;
+      }
+      if (memosRes.setup && !threads.length && !threadRes.error) {
+        renderInbox({memos: [], threads: []});
+        return;
+      }
+      if (memosRes.error && threadRes.error && !memos.length && !threads.length) {
+        renderInbox({error: "Couldn't load memos."});
+        return;
+      }
+      renderInbox({
+        memos: memos,
+        threads: threads,
+        error: memosRes.error || threadRes.error || ""
+      });
+    });
+  }
+  function markThreadSeen(id, row) {
+    if (!id) return;
+    var seen = seenMap();
+    seen[id] = Date.now();
+    try { if (root.localStorage) localStorage.setItem("dash-channel-seen", JSON.stringify(seen)); } catch (e) {}
+    var pill = row.querySelector(".inbox-new");
+    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+    row.className = row.className.replace(/\bunread\b/, "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
   }
   function markRead(id, row) {
     var cfg = config();

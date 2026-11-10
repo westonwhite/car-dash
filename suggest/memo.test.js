@@ -154,6 +154,29 @@ assert.strictEqual(kept.length, 1);
 assert.strictEqual(kept[0].id, "9-1");
 assert.strictEqual(ask.statusOf({queued: true, labels: []}, null).text, "Queued");
 
+var channel = ask.shapeChannel(
+  [{id: "1", from: "Anna", text: "hi from Anna", at: "2026-11-10T15:00:00.000Z", read: true}],
+  [{
+    number: 14,
+    text: "make the memos tab two-way",
+    at: "2026-11-10T16:00:00.000Z",
+    replies: [{text: "Done: it is a two-way channel now.", at: "2026-11-10T16:05:00.000Z"}]
+  }]
+);
+assert.strictEqual(channel.items[0].from, "You to Grok Bot");
+assert.strictEqual(channel.items[0].replies[0].from, "Grok Bot reply");
+assert.strictEqual(channel.items[0].replies[0].text.indexOf("Done:") === 0, true);
+assert.strictEqual(channel.items[1].from, "From Anna");
+assert.strictEqual(channel.items[1].text, "hi from Anna");
+assert.strictEqual(channel.unread, 1);
+assert.strictEqual(ask.formatStamp("2026-11-10T19:02:00.000Z").indexOf("ET") > 0, true);
+assert.ok(ask.activityOf(channel.items[0]) >= "2026-11-10T16:05:00.000Z");
+
+var waiting = ask.shapeChannel([], [{number: 14, text: "note", at: "2026-11-10T16:00:00.000Z", replies: [], read: true}]);
+assert.strictEqual(waiting.items[0].from, "You to Grok Bot");
+assert.strictEqual(waiting.items[0].replies.length, 0);
+assert.strictEqual(waiting.unread, 0);
+
 var fs = require("fs");
 var src = fs.readFileSync(__dirname + "/../suggest.js", "utf8") +
   fs.readFileSync(__dirname + "/../ask-config.js", "utf8") +
@@ -170,5 +193,9 @@ var repoFiles = src + fs.readFileSync(__dirname + "/SETUP.md", "utf8") +
 assert.ok(!/@[a-z0-9.-]+\.[a-z]{2,}/i.test(repoFiles));
 assert.ok(repoFiles.indexOf("MEMO_KEY_ANNA") >= 0);
 assert.ok(repoFiles.indexOf("Memos will appear here once setup is done") >= 0);
+assert.ok(src.indexOf("channel.json") >= 0);
+assert.ok(src.indexOf("You to Grok Bot") >= 0);
+assert.ok(src.indexOf("Grok Bot reply") >= 0);
+assert.ok(src.indexOf("From Anna") >= 0);
 
 console.log("ask tests ok");

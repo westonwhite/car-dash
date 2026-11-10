@@ -160,7 +160,7 @@ html.ask-open,html.ask-open body{overflow:hidden}
 #askDlg button:focus-visible,#askDlg textarea:focus-visible,#askOpen:focus-visible,#memoInbox button:focus-visible{outline:3px solid #22d3ee;outline-offset:2px}
 #memoInbox{
   flex:none;
-  max-height:132px;
+  max-height:248px;
   display:flex;
   flex-direction:column;
   min-height:0;
@@ -191,7 +191,17 @@ html.ask-open,html.ask-open body{overflow:hidden}
 .inbox-item .meta b{color:#f4f8fc;font-size:13px}
 .inbox-new{background:#123024;color:#bbf7d0;border-radius:999px;font-size:10px;font-weight:800;padding:1px 6px}
 .inbox-item p{margin:2px 0 0;font-size:13px;line-height:1.3;white-space:pre-wrap}
+.inbox-thread{padding-bottom:6px}
+.inbox-reply{
+  margin:6px 0 0 10px;
+  padding:4px 0 0 8px;
+  border-left:2px solid #1d3a57;
+}
+.inbox-reply .meta b{color:#7dd3fc}
+.inbox-wait{margin:4px 0 0;color:#93a6ba;font-size:12px;line-height:1.3}
 @media (max-height:640px){
+  #memoInbox{max-height:180px}
+
   .ask-top{padding:8px 12px 4px}
   .ask-top p{display:none}
   .ask-x,.ask-picks button{height:46px}

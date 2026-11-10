@@ -11,7 +11,7 @@ Anything that becomes a GitHub issue is public. The box says so: "Don't include 
 1. The car browser POSTs the text to a Google Apps Script web app. The body is `text/plain` JSON. It includes who asked, who it's for, the page name, time, and screen size.
 2. The script does not call GitHub. It checks the request, emails a person-to-person memo when that is what was asked, stores the full memo for the inbox, and appends the request to a queue in Script Properties. It answers `{ok:true, queued:true, id}`.
 3. The car treats that as sent. **Thanks, sent!**, **Memo sent to Weston**, and **Memo sent to Anna** show then. The request list keeps a local **Queued** row until the matching issue appears in `westonwhite/dash-requests`.
-4. A computer you control runs `suggest/sync_requests.py` every 2 minutes. It reads the queue with `SYNC_KEY`, creates each issue with `gh`, then acks the queue. The issue body includes `Queue-Id:` so a retry does not file a second copy.
+4. A computer you control runs `suggest/sync_requests.py` every 2 minutes. It reads the queue with `SYNC_KEY`, creates each issue with `gh`, then acks the queue. The issue body includes `Queue-Id:` so a retry does not file a second copy. The same pass writes a sanitized `channel.json` on this GitHub Pages site when Weston's `for-grokbot` / `weston-request` threads change, so the car does not poll GitHub for the Memos tab. That file omits private data such as account numbers, keys, and VINs.
 5. Titles and labels are unchanged: `Anna request:` / `Weston request:`, `for-grokbot` or `for-muse`, `memo` or `suggestion`, plus `nav-request`, `memo-to-weston`, and `memo-to-anna` when those apply.
 6. The page reads public issues with no token. While the box is open it refreshes about every 2 minutes. Comment on an issue and close it to answer. A closed issue with a comment is marked Answered. A nav issue that is closed or commented is **Sent to car navigation**.
 
@@ -51,7 +51,7 @@ On a computer where `gh` is logged in and can open issues on `westonwhite/dash-r
 */2 * * * * RELAY_URL='https://script.google.com/macros/s/DEPLOYMENT/exec' SYNC_KEY='the-sync-phrase' python3 /path/to/car-dash/suggest/sync_requests.py
 ```
 
-Replace the URL and the phrase. Do not commit them. The script prints nothing when the queue is empty. When it files an issue it prints `created <id> -> #<number>`.
+Replace the URL and the phrase. Do not commit them. The script prints nothing when the queue is empty and `channel.json` is already current. When it files an issue it prints `created <id> -> #<number>`. When it refreshes the Memos tab data it prints `updated channel.json`.
 
 ## 5. Check
 
@@ -61,7 +61,7 @@ On Anna's page, **Send a memo to Weston** emails the full text to `WESTON_EMAIL`
 
 On hub.html, **Send a memo to Anna** emails the full text to `ANNA_EMAIL` with the subject `Memo from Weston (Mission Control)`. The public issue is titled `Memo to Anna`, labeled `memo-to-anna` and `weston-request`, and the body keeps only the first 80 characters. The car says **Memo sent to Anna**. If either email property is missing, nothing is queued and the page does not claim it was sent.
 
-**Memos from Anna** on the hub and **Memos from Weston** on Anna's page read `GET {endpoint}?action=memos&for=weston|anna&key=…`. Until `endpoint` and `memoKey` are set, the card says **Memos will appear here once setup is done.**
+The **Memos** tab on the hub shows memos from Anna next to Weston's notes to Grok Bot. Notes are labeled **You to Grok Bot**, and issue comments are threaded under them as **Grok Bot reply**. The hub reads `channel.json` on this site for those threads, and still reads `GET {endpoint}?action=memos&for=weston&key=…` for Anna's memos. **Memos from Weston** on Anna's page is unchanged. Until `endpoint` and `memoKey` are set, Anna's memos say **Memos will appear here once setup is done.** Grok Bot threads still load from `channel.json`.
 
 ## Navigation
 
