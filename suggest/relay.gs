@@ -68,6 +68,7 @@ function doPost(e) {
       });
     }
     var id = enqueue(issue, info, text);
+    try { notifyBot(text, info, id); } catch (errN) {}
     return json({ok: true, queued: true, id: id});
   } catch (err2) {
     return json({ok: false, error: String(err2 && err2.message ? err2.message : err2).slice(0, 180)});
@@ -193,6 +194,19 @@ function sendPersonMail(text, info) {
     text
   ].join("\n");
   MailApp.sendEmail(to, subject, body);
+}
+
+/* Wakes Weston's Grok Bot by email for anything it should act on or relay.
+   Set script property BOT_NOTIFY_EMAIL to the bot's tagged inbox. Empty means off. */
+function notifyBot(text, info, id) {
+  var to = clip(PropertiesService.getScriptProperties().getProperty("BOT_NOTIFY_EMAIL"), 200);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+  var forBot = info.audience === "grok" || info.kind === "nav" || (info.kind === "person" && info.requester === "anna");
+  if (!forBot) return;
+  var who = info.requester === "anna" ? "Anna" : "Weston";
+  var what = info.kind === "person" ? "memo to Weston" : (info.kind === "nav" ? "nav request" : "request for Grok Bot");
+  MailApp.sendEmail(to, "Dash request: " + who + " " + what + " [" + id + "]",
+    [who + " sent a " + what + ".", "Page: " + info.page, "Queue-Id: " + id, "", text].join("\n"));
 }
 
 function readIndex(name) {
