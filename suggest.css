@@ -79,6 +79,7 @@ html.ask-open,html.ask-open body{overflow:hidden}
   font-size:18px;
   font-weight:700;
 }
+#askForPerson{grid-column:1 / -1}
 .ask-picks button[aria-pressed="true"]{background:#e8f1fa;color:#071018;border-color:#e8f1fa}
 .ask-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #askText{

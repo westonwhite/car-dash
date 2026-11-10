@@ -19,6 +19,8 @@ var LABEL_META = {
   "memo": ["6b7280", "Just a note"],
   "suggestion": ["0e8a16", "Change requested from the car"],
   "nav-request": ["c2410c", "Send this destination to the car's navigation"],
+  "memo-to-weston": ["1d4e89", "Memo from Anna to Weston"],
+  "memo-to-anna": ["7c3aed", "Memo from Weston to Anna"],
 };
 
 function doGet() {
@@ -37,7 +39,7 @@ function doPost(e) {
     if (data.requester !== "anna" && data.requester !== "weston") return json({ok: false, error: "Bad request"});
     if (tooMany()) return json({ok: false, error: "Too many requests. Try again in a little while."});
     var info = {
-      kind: data.kind === "nav" ? "nav" : "",
+      kind: data.kind === "nav" ? "nav" : (data.kind === "person" ? "person" : ""),
       requester: data.requester,
       audience: data.audience === "muse" ? "muse" : "grok",
       tag: data.tag === "suggestion" ? "suggestion" : "note",
@@ -51,7 +53,9 @@ function doPost(e) {
       when: clip(data.when, 120),
       screen: clip(data.screen, 160)
     };
-    var created = createIssue(makeIssue(text, info));
+    var issue = makeIssue(text, info);
+    if (info.kind === "person") sendPersonMail(text, info);
+    var created = createIssue(issue);
     return json({ok: true, number: created.number});
   } catch (err2) {
     return json({ok: false, error: String(err2 && err2.message ? err2.message : err2).slice(0, 180)});
@@ -69,8 +73,42 @@ function coord(v, lim) {
   return Math.round(n * 1e5) / 1e5;
 }
 
+function previewText(text, n) {
+  var flat = String(text || "").replace(/\s+/g, " ");
+  if (flat.length <= n) return flat;
+  return flat.slice(0, n) + "...";
+}
+
 function makeIssue(text, info) {
   var anna = info.requester === "anna";
+  if (info.kind === "person") {
+    var meta = [
+      "Page: " + info.page,
+      "URL: " + info.url,
+      "When: " + info.when,
+      "Screen: " + info.screen
+    ];
+    if (anna) {
+      var shown = text.replace(/\s+/g, " ");
+      var westonTitle = "Memo to Weston: " + (shown.slice(0, 72) || "memo");
+      if (shown.length > 72) westonTitle += "...";
+      return {
+        title: westonTitle,
+        labels: ["anna-request", "memo-to-weston"],
+        body: meta.concat(["", text]).join("\n")
+      };
+    }
+    return {
+      title: "Memo to Anna",
+      labels: ["weston-request", "memo-to-anna"],
+      body: meta.concat([
+        "",
+        "Public preview only. The full memo is emailed, not stored here.",
+        "",
+        previewText(text, 80)
+      ]).join("\n")
+    };
+  }
   if (info.kind === "nav") {
     var place = info.name || "destination";
     var title = (anna ? "Anna nav: " : "Weston nav: ") + place.slice(0, 80);
@@ -115,6 +153,25 @@ function makeIssue(text, info) {
       text
     ].join("\n")
   };
+}
+
+function sendPersonMail(text, info) {
+  var anna = info.requester === "anna";
+  var props = PropertiesService.getScriptProperties();
+  var key = anna ? "WESTON_EMAIL" : "ANNA_EMAIL";
+  var to = clip(props.getProperty(key), 200);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    throw new Error(key + " is not set");
+  }
+  var subject = anna ? "Memo from Anna (Caroline's whip)" : "Memo from Weston (Mission Control)";
+  var body = [
+    anna ? "Memo from Anna" : "Memo from Weston",
+    "Page: " + (info.page || ""),
+    "When: " + (info.when || ""),
+    "",
+    text
+  ].join("\n");
+  MailApp.sendEmail(to, subject, body);
 }
 
 function tooMany() {

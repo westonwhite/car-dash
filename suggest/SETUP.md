@@ -52,13 +52,15 @@ Copy the token once. It goes only in the script property in the next step. When 
 
 1. Open [script.google.com](https://script.google.com) and create a project.
 2. Replace the default file with the full contents of `suggest/relay.gs`.
-3. Project settings → Script properties:
+3. Project settings → Script properties. Do not put these in the website:
    - `GITHUB_TOKEN` = the token from step 2
    - `GITHUB_REPO` = `westonwhite/dash-requests`
+   - `WESTON_EMAIL` = `smithmweston@gmail.com` (Anna's memos are emailed here)
+   - `ANNA_EMAIL` = Anna's email address. Type it only in this property. Do not commit it, and do not put it in any file in this repo or on the page.
 4. Deploy → New deployment → type **Web app**.
-   - Execute as: **Me**
+   - Execute as: **Me** (this is the Google account the mail is sent from)
    - Who has access: **Anyone**
-5. Authorize the Google prompt. Copy the URL that ends in `/exec`.
+5. Authorize the Google prompt, including permission to send email. Copy the URL that ends in `/exec`.
 
 Opening that URL in a browser should show `{"ok":true,"ready":true}`.
 
@@ -82,7 +84,11 @@ On hub.html, send a note for Grok Bot, then a change for Muse. On Anna's page, s
 - a note is `memo`; a change is `suggestion`
 - the body includes the page name, the time (Eastern plus UTC), and the screen size
 
-The script creates those labels on the first send. The car shows **Thanks, sent!** only after GitHub accepts the issue. Open the box again: the request is listed. Comment on it and close it, wait for the refresh, and the comment shows with status Answered.
+On Anna's page, choose **Send a memo to Weston** and send a note. That files an issue labeled `memo-to-weston` and `anna-request`, and emails the full text to `WESTON_EMAIL` with the subject `Memo from Anna (Caroline's whip)`. The car says **Memo sent to Weston**.
+
+On hub.html, choose **Send a memo to Anna**. That emails the full text to `ANNA_EMAIL` with the subject `Memo from Weston (Mission Control)`, and files an issue labeled `memo-to-anna` and `weston-request`. The public issue title is `Memo to Anna` and the body keeps only the first 80 characters. The car says **Memo sent to Anna**. If `ANNA_EMAIL` or `WESTON_EMAIL` is missing, the relay does not file the issue and does not claim it was sent.
+
+The script creates those labels on the first send. The car shows **Thanks, sent!** for a Grok Bot or Muse request only after GitHub accepts the issue. Open the box again: the request is listed. Comment on it and close it, wait for the refresh, and the comment shows with status Answered.
 
 ## Navigation
 

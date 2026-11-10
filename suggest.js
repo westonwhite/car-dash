@@ -68,9 +68,10 @@
     info = info || {};
     var clean = clip(String(text || "").replace(/\r\n/g, "\n"), MAX);
     var anna = info.requester === "anna";
+    var flat = clean.replace(/\s+/g, " ");
+    if (info.audience === "person") return personIssue(clean, flat, info, anna);
     var muse = info.audience === "muse";
     var suggestion = info.tag === "suggestion";
-    var flat = clean.replace(/\s+/g, " ");
     var title = (anna ? "Anna request: " : "Weston request: ") + (flat.slice(0, 72) || "dashboard request");
     if (flat.length > 72) title += "...";
     var labels = [
@@ -88,7 +89,37 @@
       "",
       clean
     ].join("\n");
-    return {title: title, body: body, labels: labels, text: clean, suggestion: suggestion, anna: anna, muse: muse};
+    return {title: title, body: body, labels: labels, text: clean, suggestion: suggestion, anna: anna, muse: muse, person: ""};
+  }
+  function personIssue(clean, flat, info, anna) {
+    var meta = [
+      "Page: " + (info.page || "unknown"),
+      "URL: " + (info.url || ""),
+      "When: " + (info.when || ""),
+      "Screen: " + (info.screen || "")
+    ];
+    if (anna) {
+      var title = "Memo to Weston: " + (flat.slice(0, 72) || "memo");
+      if (flat.length > 72) title += "...";
+      return {
+        title: title,
+        body: meta.concat(["", clean]).join("\n"),
+        labels: ["anna-request", "memo-to-weston"],
+        text: clean,
+        person: "Weston",
+        confirm: "Memo sent to Weston"
+      };
+    }
+    var preview = flat.slice(0, 80);
+    if (flat.length > 80) preview += "...";
+    return {
+      title: "Memo to Anna",
+      body: meta.concat(["", "Public preview only. The full memo is emailed, not stored here.", "", preview]).join("\n"),
+      labels: ["weston-request", "memo-to-anna"],
+      text: clean,
+      person: "Anna",
+      confirm: "Memo sent to Anna"
+    };
   }
   function buildNav(info) {
     info = info || {};
@@ -164,6 +195,8 @@
     return false;
   }
   function statusOf(issue, reply) {
+    if (hasLabel(issue, "memo-to-anna")) return {text: "Memo to Anna", cls: "done"};
+    if (hasLabel(issue, "memo-to-weston")) return {text: "Memo to Weston", cls: "done"};
     var navDone = hasLabel(issue, "nav-request") && (issue.state === "closed" || reply || issue.comments > 0);
     if (navDone) return {text: "Sent to car navigation", cls: "done"};
     if (issue.state === "closed") return reply ? {text: "Answered", cls: "done"} : {text: "Closed", cls: "shut"};
@@ -265,12 +298,13 @@
       '<div class="ask-top"><div><h2 id="askTitle">Ask Grok Bot</h2>' +
       '<p>Answers show up in this box.</p></div>' +
       '<button type="button" class="ask-x" id="askClose">Close</button></div>' +
-      '<p class="ask-lab">Who it&rsquo;s for</p>' +
-      '<div class="ask-picks" role="group" aria-label="Who it is for">' +
+      '<p class="ask-lab" id="askWhoLab">Who it&rsquo;s for</p>' +
+      '<div class="ask-picks" id="askWho" role="group" aria-label="Who it is for">' +
         '<button type="button" id="askForGrok" data-aud="grok" aria-pressed="true">Grok Bot</button>' +
-        '<button type="button" id="askForMuse" data-aud="muse" aria-pressed="false">Muse</button></div>' +
-      '<p class="ask-lab">Memo or a change</p>' +
-      '<div class="ask-picks" role="group" aria-label="Memo or a change">' +
+        '<button type="button" id="askForMuse" data-aud="muse" aria-pressed="false">Muse</button>' +
+        '<button type="button" id="askForPerson" data-aud="person" aria-pressed="false"></button></div>' +
+      '<p class="ask-lab" id="askKindLab">Memo or a change</p>' +
+      '<div class="ask-picks" id="askKind" role="group" aria-label="Memo or a change">' +
         '<button type="button" id="askTagNote" data-tag="note" aria-pressed="true">Just a note</button>' +
         '<button type="button" id="askTagChange" data-tag="suggestion" aria-pressed="false">Suggest a change</button></div>' +
       '<label class="ask-sr" for="askText">Request</label>' +
@@ -291,6 +325,13 @@
   function el(id) { return dlg.querySelector("#" + id); }
   function hintText() {
     var n = el("askText").value.length;
+    if (audience === "person") {
+      var to = requester === "anna" ? "Weston" : "Anna";
+      var extra = requester === "anna"
+        ? "Memo to Weston. He gets the full note by email and on GitHub."
+        : "Memo to Anna. She gets the full note by email. The public issue keeps only a short preview.";
+      return extra + " " + n + " / " + MAX;
+    }
     var who = audience === "muse" ? "For Muse." : "For Grok Bot.";
     var kind = tag === "suggestion" ? "Tagged as a change." : "Just a note.";
     return who + " " + kind + " Page, time, and screen size are included. " + n + " / " + MAX;
@@ -298,8 +339,14 @@
   function paint() {
     el("askForGrok").setAttribute("aria-pressed", audience === "grok" ? "true" : "false");
     el("askForMuse").setAttribute("aria-pressed", audience === "muse" ? "true" : "false");
+    el("askForPerson").textContent = requester === "anna" ? "Send a memo to Weston" : "Send a memo to Anna";
+    el("askForPerson").setAttribute("aria-pressed", audience === "person" ? "true" : "false");
     el("askTagNote").setAttribute("aria-pressed", tag === "note" ? "true" : "false");
     el("askTagChange").setAttribute("aria-pressed", tag === "suggestion" ? "true" : "false");
+    var person = audience === "person";
+    el("askKindLab").style.display = person ? "none" : "";
+    el("askKind").style.display = person ? "none" : "";
+    el("askSend").textContent = person ? "Send memo" : "Send";
     var hint = el("askHint");
     hint.className = "ask-hint";
     hint.textContent = hintText();
@@ -413,8 +460,10 @@
       card.appendChild(node("b", "", issue.title || "Request"));
       var metaRow = node("div", "ask-meta");
       metaRow.appendChild(node("span", "ask-st " + st.cls, st.text));
-      metaRow.appendChild(node("span", "", hasLabel(issue, "for-muse") ? "Muse" : "Grok Bot"));
-      metaRow.appendChild(node("span", "", hasLabel(issue, "suggestion") ? "Suggest a change" : "Just a note"));
+      var who = hasLabel(issue, "memo-to-anna") ? "Memo to Anna" : hasLabel(issue, "memo-to-weston") ? "Memo to Weston" : hasLabel(issue, "for-muse") ? "Muse" : hasLabel(issue, "nav-request") ? "Navigation" : "Grok Bot";
+      var kind = hasLabel(issue, "memo-to-anna") || hasLabel(issue, "memo-to-weston") ? "Email" : hasLabel(issue, "nav-request") ? "Navigation" : hasLabel(issue, "suggestion") ? "Suggest a change" : "Just a note";
+      metaRow.appendChild(node("span", "", who));
+      metaRow.appendChild(node("span", "", kind));
       card.appendChild(metaRow);
       if (reply && reply.body) {
         var body = String(reply.body);
@@ -490,6 +539,9 @@
   }
   function showThanks() {
     mode = "write";
+    el("askThanks").textContent = audience === "person"
+      ? (requester === "anna" ? "Memo sent to Weston" : "Memo sent to Anna")
+      : "Thanks, sent!";
     el("askThanks").hidden = false;
     el("askText").value = "";
     tag = "note";
@@ -528,6 +580,7 @@
       requester: info.requester,
       audience: info.audience,
       tag: info.tag,
+      kind: audience === "person" ? "person" : "",
       page: info.page,
       url: info.url,
       when: info.when,
@@ -553,6 +606,7 @@
   el("askBack").addEventListener("click", showWrite);
   el("askForGrok").addEventListener("click", function () { audience = "grok"; paint(); });
   el("askForMuse").addEventListener("click", function () { audience = "muse"; paint(); });
+  el("askForPerson").addEventListener("click", function () { audience = "person"; paint(); });
   el("askTagNote").addEventListener("click", function () { tag = "note"; paint(); });
   el("askTagChange").addEventListener("click", function () { tag = "suggestion"; paint(); });
   el("askText").addEventListener("input", function () {

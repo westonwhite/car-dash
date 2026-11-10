@@ -108,11 +108,44 @@ assert.ok(badNav.title.indexOf("Weston nav: ") === 0);
 
 assert.strictEqual(ask.POLL_MS, 120000);
 
+var toWeston = ask.buildIssue("Bring the dog bed please", {
+  requester: "anna",
+  audience: "person",
+  page: "Anna · Caroline's whip",
+  url: "https://westonwhite.github.io/anna/",
+  when: annaInfo.when,
+  screen: annaInfo.screen
+});
+assert.strictEqual(toWeston.confirm, "Memo sent to Weston");
+assert.deepStrictEqual(toWeston.labels, ["anna-request", "memo-to-weston"]);
+assert.ok(toWeston.title.indexOf("Memo to Weston: Bring the dog bed please") === 0);
+assert.ok(toWeston.body.indexOf("Bring the dog bed please") >= 0);
+
+var longMemo = new Array(30).join("private note ");
+var toAnna = ask.buildIssue(longMemo, {
+  requester: "weston",
+  audience: "person",
+  page: "Miracle Whip · Mission Control",
+  url: "https://westonwhite.github.io/car-dash/hub.html",
+  when: annaInfo.when,
+  screen: annaInfo.screen
+});
+assert.strictEqual(toAnna.title, "Memo to Anna");
+assert.strictEqual(toAnna.confirm, "Memo sent to Anna");
+assert.deepStrictEqual(toAnna.labels, ["weston-request", "memo-to-anna"]);
+assert.ok(toAnna.body.indexOf("Public preview only") >= 0);
+assert.ok(toAnna.body.indexOf(longMemo) < 0);
+var previewLine = toAnna.body.split("\n").pop();
+assert.ok(previewLine.length <= 83);
+assert.strictEqual(ask.statusOf({state: "open", labels: [{name: "memo-to-anna"}], comments: 0}, null).text, "Memo to Anna");
+assert.strictEqual(ask.statusOf({state: "open", labels: ["memo-to-weston"], comments: 0}, null).text, "Memo to Weston");
+
 var fs = require("fs");
 var src = fs.readFileSync(__dirname + "/../suggest.js", "utf8") +
   fs.readFileSync(__dirname + "/../ask-config.js", "utf8") +
   fs.readFileSync(__dirname + "/relay.gs", "utf8");
 assert.ok(!/ghp_|github_pat_|gho_|ghu_|ghs_|ghr_/.test(src));
+assert.ok(!/@[a-z0-9.-]+\.[a-z]{2,}/i.test(src));
 assert.ok(src.indexOf("Don't include passwords or account numbers.") >= 0);
 assert.ok(src.indexOf("anna-request") >= 0);
 assert.ok(src.indexOf("weston-request") >= 0);
