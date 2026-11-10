@@ -76,6 +76,7 @@ tr+tr td{border-top:1px solid #10263a}
   .card{padding:10px 14px;gap:6px}.plain,.row,.taf,table,.fl{font-size:15px}.big{font-size:26px}.kv b{font-size:18px}.ct{font-size:12px}
 }
 </style>
+<link rel="stylesheet" href="suggest.css">
 </head>
 <body>
 <div class="app">
@@ -463,5 +464,7 @@ load();
 setInterval(() => { if (!document.hidden) load(); }, 5 * 60 * 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
 </script>
+<script src="ask-config.js"></script>
+<script src="suggest.js" data-requester="weston" data-page="Comanche · Mission Control" data-car="the miracle whip"></script>
 </body>
 </html>
