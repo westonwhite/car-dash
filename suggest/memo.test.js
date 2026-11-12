@@ -107,6 +107,12 @@ assert.strictEqual(badNav.payload.lon, null);
 assert.ok(badNav.title.indexOf("Weston nav: ") === 0);
 
 assert.strictEqual(ask.POLL_MS, 120000);
+assert.strictEqual(ask.MAX, 8000);
+var full = ask.buildIssue(new Array(8001).join("a"), annaInfo);
+assert.strictEqual(full.text.length, 8000);
+var over = ask.buildIssue(new Array(8002).join("a"), annaInfo);
+assert.strictEqual(over.text.length, 8000);
+
 
 var toWeston = ask.buildIssue("Bring the dog bed please", {
   requester: "anna",

@@ -4,7 +4,7 @@
    the relay in suggest/SETUP.md. Reading answers uses the public
    GitHub API with no token, and only while this box is open. */
 (function (root) {
-  var MAX = 2000;
+  var MAX = 8000;
   var POLL_MS = 120000;
   var requester = "weston";
   var pageFromScript = "";
@@ -352,7 +352,7 @@
         '<button type="button" id="askTagNote" data-tag="note" aria-pressed="true">Just a note</button>' +
         '<button type="button" id="askTagChange" data-tag="suggestion" aria-pressed="false">Suggest a change</button></div>' +
       '<label class="ask-sr" for="askText">Request</label>' +
-      '<textarea id="askText" maxlength="2000" autocapitalize="sentences" autocomplete="off" spellcheck="true" placeholder="Type here, or tap the mic on the keyboard and talk."></textarea>' +
+      '<textarea id="askText" maxlength="' + MAX + '" autocapitalize="sentences" autocomplete="off" spellcheck="true" placeholder="Type here, or tap the mic on the keyboard and talk."></textarea>' +
       '<div class="ask-hp" aria-hidden="true"><label>Leave blank<input id="askHp" tabindex="-1" autocomplete="off" value=""></label></div>' +
       '<p class="ask-warn">' + "Don't include passwords or account numbers." + '</p>' +
       '<div class="ask-foot"><p class="ask-hint" id="askHint"></p>' +

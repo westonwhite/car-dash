@@ -9,7 +9,9 @@
  * Deploy as a web app: execute as me, access Anyone.
  * The page POSTs text/plain so the browser can read the reply.
  */
-var MAX_TEXT = 2000;
+var MAX_TEXT = 8000;
+var PROP_LIMIT = 8500;
+var PROP_CHUNK = 8000;
 var LABEL_META = {
   "anna-request": ["7c3aed", "Request from Anna's page"],
   "weston-request": ["0e7490", "Request from Weston's Mission Control"],
@@ -78,6 +80,59 @@ function doPost(e) {
 function clip(v, n) {
   var s = String(v == null ? "" : v).replace(/^\s+|\s+$/g, "");
   return s.length > n ? s.slice(0, n) : s;
+}
+
+/* Script Properties hold 9KB each. Long Ask text is split across chunks
+   so a raise of MAX_TEXT cannot wipe or reject the request. */
+function writeProp(props, key, value) {
+  dropProp(props, key);
+  value = String(value == null ? "" : value);
+  if (value.length <= PROP_LIMIT) {
+    props.setProperty(key, value);
+    return;
+  }
+  var n = 0;
+  var i;
+  for (i = 0; i < value.length; i += PROP_CHUNK) {
+    props.setProperty(key + "_C" + n, value.slice(i, i + PROP_CHUNK));
+    n++;
+  }
+  props.setProperty(key, JSON.stringify({chunks: n}));
+}
+
+function readProp(props, key) {
+  var raw = props.getProperty(key);
+  if (!raw) return null;
+  if (raw.charAt(0) === "{") {
+    try {
+      var meta = JSON.parse(raw);
+      if (meta && typeof meta.chunks === "number" && meta.chunks > 0 && meta.id == null) {
+        var parts = [];
+        var i;
+        for (i = 0; i < meta.chunks; i++) {
+          var part = props.getProperty(key + "_C" + i);
+          if (part == null) return null;
+          parts.push(part);
+        }
+        return parts.join("");
+      }
+    } catch (e) {}
+  }
+  return raw;
+}
+
+function dropProp(props, key) {
+  var raw = props.getProperty(key);
+  if (raw) {
+    try {
+      var meta = JSON.parse(raw);
+      if (meta && typeof meta.chunks === "number" && meta.chunks > 0 && meta.id == null) {
+        var i;
+        for (i = 0; i < meta.chunks; i++) props.deleteProperty(key + "_C" + i);
+      }
+    } catch (e2) {}
+  }
+  props.deleteProperty(key);
 }
 
 function coord(v, lim) {
@@ -244,19 +299,14 @@ function enqueue(issue, info, text) {
     synced: false,
     issue: null
   };
-  var packed = JSON.stringify(rec);
-  if (packed.length > 8500) {
-    rec.text = "";
-    packed = JSON.stringify(rec);
-  }
-  props.setProperty("QUEUE_" + id, packed);
+  writeProp(props, "QUEUE_" + id, JSON.stringify(rec));
   var index = readIndex("QUEUE_INDEX");
   index.unshift(id);
   if (index.length > 40) {
     var drop = index.slice(40);
     index = index.slice(0, 40);
     var i;
-    for (i = 0; i < drop.length; i++) props.deleteProperty("QUEUE_" + drop[i]);
+    for (i = 0; i < drop.length; i++) dropProp(props, "QUEUE_" + drop[i]);
   }
   props.setProperty("QUEUE_INDEX", JSON.stringify(index));
   return id;
@@ -274,7 +324,7 @@ function listQueue(key) {
   var out = [];
   var i;
   for (i = 0; i < index.length; i++) {
-    var raw = props.getProperty("QUEUE_" + index[i]);
+    var raw = readProp(props, "QUEUE_" + index[i]);
     if (!raw) continue;
     var rec = null;
     try { rec = JSON.parse(raw); } catch (e) { rec = null; }
@@ -296,14 +346,14 @@ function ackQueue(key, ids, issues) {
   for (i = 0; i < ids.length; i++) {
     id = String(ids[i] || "");
     if (!/^[0-9]+-[0-9]+$/.test(id)) continue;
-    raw = props.getProperty("QUEUE_" + id);
+    raw = readProp(props, "QUEUE_" + id);
     num = parseInt(issues[id], 10);
     if (raw) {
       try { rec = JSON.parse(raw); } catch (e2) { rec = null; }
       if (rec) {
         rec.synced = true;
         if (num) rec.issue = num;
-        props.setProperty("QUEUE_" + id, JSON.stringify(rec));
+        writeProp(props, "QUEUE_" + id, JSON.stringify(rec));
       }
     }
     if (num) done[id] = num;
@@ -338,14 +388,14 @@ function saveMemo(memo) {
     label: clip(memo.label, 120),
     read: false
   };
-  props.setProperty("MEMO_" + id, JSON.stringify(rec));
+  writeProp(props, "MEMO_" + id, JSON.stringify(rec));
   var index = readIndex("MEMOS_INDEX");
   index.unshift(id);
   if (index.length > 40) {
     var drop = index.slice(40);
     index = index.slice(0, 40);
     var i;
-    for (i = 0; i < drop.length; i++) props.deleteProperty("MEMO_" + drop[i]);
+    for (i = 0; i < drop.length; i++) dropProp(props, "MEMO_" + drop[i]);
   }
   props.setProperty("MEMOS_INDEX", JSON.stringify(index));
 }
@@ -357,7 +407,7 @@ function listMemos(who, key) {
   var out = [];
   var i;
   for (i = 0; i < index.length; i++) {
-    var raw = props.getProperty("MEMO_" + index[i]);
+    var raw = readProp(props, "MEMO_" + index[i]);
     if (!raw) continue;
     var rec = null;
     try { rec = JSON.parse(raw); } catch (e3) { rec = null; }
@@ -371,12 +421,12 @@ function markMemoRead(who, key, id) {
   if (!memoKeyOk(who, key)) return {ok: false, error: "Memos aren't set up"};
   if (!/^[0-9]+-[0-9]+$/.test(String(id || ""))) return {ok: false, error: "Bad id"};
   var props = PropertiesService.getScriptProperties();
-  var raw = props.getProperty("MEMO_" + id);
+  var raw = readProp(props, "MEMO_" + id);
   if (!raw) return {ok: false, error: "Missing"};
   var rec = JSON.parse(raw);
   if (!rec || rec.to !== who) return {ok: false, error: "Missing"};
   rec.read = true;
-  props.setProperty("MEMO_" + id, JSON.stringify(rec));
+  writeProp(props, "MEMO_" + id, JSON.stringify(rec));
   return {ok: true};
 }
 

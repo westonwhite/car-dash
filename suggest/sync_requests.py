@@ -26,7 +26,7 @@ REPO = "westonwhite/dash-requests"
 CHANNEL_REPO = "westonwhite/car-dash"
 CHANNEL_PATH = "channel.json"
 CHANNEL_LIMIT = 30
-TEXT_LIMIT = 2000
+TEXT_LIMIT = 8000
 LABELS = {
     "anna-request": ("7c3aed", "Request from Anna's page"),
     "weston-request": ("0e7490", "Request from Weston's Mission Control"),
