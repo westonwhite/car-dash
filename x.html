@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>X · Mission Control</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#04070c;--p:#0a1119;--p2:#0f1924;--line:#15324a;--fg:#e8f1fa;--mut:#7f93a8;--acc:#22d3ee;--acc2:#3ea6ff;--ok:#34d399;--r:14px}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{background-image:linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.035) 1px,transparent 1px);background-size:40px 40px}
+.app{min-height:100vh;display:flex;flex-direction:column;padding:10px 12px 24px;gap:10px}
+header{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#0a1724,#060b12);border:1px solid var(--line);border-radius:var(--r);padding:8px 14px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1.1;margin-right:4px}
+.brand b{font-size:22px;letter-spacing:3px;text-transform:uppercase}
+.brand span{font-size:11px;letter-spacing:3px;color:var(--acc);text-transform:uppercase}
+.hbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:0 14px;border-radius:12px;background:var(--p2);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:17px;font-weight:600;white-space:nowrap;font-family:inherit;cursor:pointer}
+.hbtn svg.i{width:1.1em;height:1.1em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--acc)}
+.hbtn:hover,.hbtn:active{border-color:var(--acc);box-shadow:0 0 12px rgba(34,211,238,.35)}
+#clock{margin-left:auto;font-size:28px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--p);color:var(--fg);font:600 16px/1 inherit;cursor:pointer}
+.filters button.on{border-color:var(--acc);background:rgba(34,211,238,.12);color:var(--acc);box-shadow:0 0 12px rgba(34,211,238,.25)}
+.meta{color:var(--mut);font-size:14px;padding:0 4px}
+.meta b{color:var(--fg);font-weight:600}
+#feed{display:flex;flex-direction:column;gap:10px;max-width:920px;width:100%;margin:0 auto}
+a.card{display:block;background:var(--p);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;color:inherit;text-decoration:none;min-height:72px}
+a.card:hover,a.card:active{border-color:var(--acc);box-shadow:0 0 16px rgba(34,211,238,.18)}
+.who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.who img{width:44px;height:44px;border-radius:50%;background:var(--p2);flex:none;object-fit:cover}
+.who .nm{font-weight:700;font-size:18px}
+.who .un{color:var(--mut);font-size:14px}
+.who .tm{margin-left:auto;color:var(--mut);font-size:14px;white-space:nowrap}
+.cat{display:inline-block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-left:6px}
+.txt{font-size:18px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.pic{display:block;margin-top:10px;width:100%;max-height:280px;object-fit:cover;border-radius:10px;background:#071018}
+.err{color:var(--mut);padding:24px;text-align:center;font-size:18px}
+footer{max-width:920px;width:100%;margin:8px auto 0;color:var(--mut);font-size:13px;line-height:1.45}
+footer a{color:var(--acc2)}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><b>X</b><span>Mission Control</span></div>
+  <a class="hbtn" href="hub.html"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Hub</a>
+  <a class="hbtn" href="./"><svg class="i" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Dash</a>
+  <a class="hbtn" href="https://is.gd/westv"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M10 10l6 2-6 2z"/></svg>Video</a>
+  <button type="button" class="hbtn" id="reload"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Refresh</button>
+  <div id="clock">--:--</div>
+</header>
+<div class="filters" id="filters" role="tablist" aria-label="Post categories">
+  <button type="button" data-k="all" class="on">All</button>
+  <button type="button" data-k="tesla">Tesla</button>
+  <button type="button" data-k="spacex">SpaceX</button>
+  <button type="button" data-k="aviation">Aviation</button>
+  <button type="button" data-k="deals">Deals</button>
+</div>
+<div class="meta" id="meta">Loading posts…</div>
+<div id="feed"><div class="err">Loading…</div></div>
+<footer id="foot"></footer>
+</div>
+<script>
+const tz='America/New_York';
+const CAT={tesla:'Tesla',spacex:'SpaceX',aviation:'Aviation',deals:'Deals'};
+function tick(){const d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:tz});}
+tick();setInterval(tick,1000);
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function when(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  if(isNaN(d))return '';
+  const now=new Date();
+  const mins=Math.round((now-d)/60000);
+  if(mins<1)return 'just now';
+  if(mins<60)return mins+'m';
+  const hrs=Math.round(mins/60);
+  if(hrs<24)return hrs+'h';
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:tz});
+}
+function tidy(text){
+  return esc(String(text||'').replace(/\s*https:\/\/t\.co\/\w+\s*$/g,'').trim());
+}
+let FEED=null, FILTER='all';
+function render(){
+  const el=document.getElementById('feed');
+  if(!FEED){el.innerHTML='<div class="err">No posts loaded.</div>';return;}
+  const rows=(FEED.posts||[]).filter(p=>FILTER==='all'||p.category===FILTER);
+  if(!rows.length){el.innerHTML='<div class="err">No posts in this category yet.</div>';return;}
+  el.innerHTML=rows.map(p=>{
+    const av=p.avatar?`<img src="${esc(p.avatar)}" alt="" width="44" height="44">`:'';
+    const img=p.image?`<img class="pic" src="${esc(p.image)}" alt="" loading="lazy">`:'';
+    return `<a class="card" href="${esc(p.url)}"><div class="who">${av}<div><div class="nm">${esc(p.name)} <span class="cat">${esc(CAT[p.category]||p.category||'')}</span></div><div class="un">@${esc(p.username)}</div></div><div class="tm">${esc(when(p.created_at))}</div></div><div class="txt">${tidy(p.text)}</div>${img}</a>`;
+  }).join('');
+}
+async function load(){
+  const meta=document.getElementById('meta');
+  const foot=document.getElementById('foot');
+  meta.textContent='Loading posts…';
+  try{
+    const r=await fetch('x-feed.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    FEED=await r.json();
+    const n=(FEED.posts||[]).length;
+    const upd=FEED.updated?new Date(FEED.updated).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:tz,timeZoneName:'short'}):'unknown';
+    meta.innerHTML='<b>'+n+'</b> public posts · snapshot '+esc(upd);
+    const accts=(FEED.accounts||[]).map(a=>'@'+a.username).join(', ');
+    foot.innerHTML='Curated from accounts you follow (Tesla, SpaceX, aviation/weather, and deals) — not your full following list or likes. Snapshot only; the car page has no X login or API key. Ask Grok Bot to refresh this feed. Open a card to read it on X. Accounts: '+esc(accts)+'.';
+    render();
+  }catch(e){
+    document.getElementById('feed').innerHTML='<div class="err">Could not load the X feed.</div>';
+    meta.textContent='Feed unavailable';
+  }
+}
+document.getElementById('filters').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-k]'); if(!b)return;
+  FILTER=b.getAttribute('data-k');
+  document.querySelectorAll('#filters button').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+document.getElementById('reload').addEventListener('click',()=>{load();});
+load();
+</script>
+</body>
+</html>
